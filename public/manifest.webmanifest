@@ -1,0 +1,16 @@
+{
+  "name": "Book Writer",
+  "short_name": "Writer",
+  "description": "Distraction-free book writing app with Dropbox sync.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f4ee",
+  "theme_color": "#f4f4ee",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
