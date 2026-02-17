@@ -13,6 +13,7 @@ import {
 import { threeWayMergeText } from "@/lib/merge";
 import {
   createBlock,
+  normalizeBlocksForEditor,
   parseMarkdownToBlocks,
   serializeBlocksToMarkdown,
 } from "@/lib/markdown";
@@ -125,7 +126,7 @@ export function useDropboxSync({
         latestRev = uploaded.rev;
       }
 
-      setBlocks(parseMarkdownToBlocks(mergedMarkdown));
+      setBlocks(normalizeBlocksForEditor(parseMarkdownToBlocks(mergedMarkdown)));
       setBaseMarkdown(mergedMarkdown);
       setRemoteRev(latestRev ?? null);
 
@@ -177,7 +178,7 @@ export function useDropboxSync({
       }
 
       const uploadResult = await dropboxUploadFile(validToken.accessToken, DROPBOX_PATH, conflict.resolved);
-      const resolvedBlocks = parseMarkdownToBlocks(conflict.resolved);
+      const resolvedBlocks = normalizeBlocksForEditor(parseMarkdownToBlocks(conflict.resolved));
       const now = Date.now();
 
       setBlocks(resolvedBlocks);
@@ -210,7 +211,8 @@ export function useDropboxSync({
         }
 
         if (storedDocument) {
-          setBlocks(storedDocument.blocks.length ? storedDocument.blocks : [createBlock("paragraph")]);
+          const normalizedStored = normalizeBlocksForEditor(storedDocument.blocks);
+          setBlocks(normalizedStored.length ? normalizedStored : [createBlock("title"), createBlock("paragraph")]);
           setUpdatedAt(storedDocument.updatedAt);
           setLastSyncedAt(storedDocument.lastSyncedAt);
           setBaseMarkdown(storedDocument.baseMarkdown);

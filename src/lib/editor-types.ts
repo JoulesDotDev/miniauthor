@@ -1,4 +1,4 @@
-export type BlockType = "title" | "heading" | "paragraph" | "page-break";
+export type BlockType = "title" | "heading" | "paragraph";
 
 export interface Block {
   id: string;

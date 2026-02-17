@@ -1,55 +1,65 @@
+import { memo } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { X } from "lucide-react";
 
+import { useEditorChrome } from "@/contexts/EditorChromeContext";
 import type { Block } from "@/lib/editor-types";
 
 interface EditorCanvasProps {
-  showChrome: boolean;
-  menuLabel: string;
   currentPage: number;
   totalPages: number;
+  pageStartHeadingIds: Set<string>;
   blocks: Block[];
-  onToggleChrome: () => void;
   onPaperRef: (element: HTMLElement | null) => void;
+  onPaperInput: () => void;
+  onPaperKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onFocusBlock: (blockId: string) => void;
-  onChangeBlock: (blockId: string, text: string) => void;
-  onBlockKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>, block: Block) => void;
   onBlockRef: (blockId: string, element: HTMLDivElement | null) => void;
-  onRemovePageBreak: (blockId: string) => void;
 }
 
 function placeholderForType(type: Block["type"]): string {
   if (type === "title") {
-    return "Main headline";
+    return "Title";
   }
 
   if (type === "heading") {
     return "Section headline";
   }
 
-  return "Start writing...";
+  return "Start writting...";
 }
 
-export function EditorCanvas({
-  showChrome,
-  menuLabel,
+function isBlockTextEmpty(html: string): boolean {
+  return html
+    .replace(/<br\s*\/?>/gi, "")
+    .replace(/<div>/gi, "")
+    .replace(/<\/div>/gi, "")
+    .replace(/<p>/gi, "")
+    .replace(/<\/p>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim().length === 0;
+}
+
+function EditorCanvasComponent({
   currentPage,
   totalPages,
+  pageStartHeadingIds,
   blocks,
-  onToggleChrome,
   onPaperRef,
+  onPaperInput,
+  onPaperKeyDown,
   onFocusBlock,
-  onChangeBlock,
-  onBlockKeyDown,
   onBlockRef,
-  onRemovePageBreak,
 }: EditorCanvasProps) {
+  const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
+  const hasSingleStarterParagraph = blocks.length === 2 && blocks[1]?.type === "paragraph";
+
   return (
     <main className="editor-shell">
       <button
         className="floating-toggle"
         type="button"
-        onClick={onToggleChrome}
+        onClick={toggleChrome}
         aria-label="Toggle menu panels"
       >
         {menuLabel}
@@ -62,42 +72,28 @@ export function EditorCanvas({
         ref={onPaperRef}
         contentEditable
         suppressContentEditableWarning
+        onInput={onPaperInput}
+        onKeyDown={onPaperKeyDown}
       >
-        {blocks.map((block) => {
-          if (block.type === "page-break") {
-            return (
-              <div
-                key={block.id}
-                className="page-break"
-                data-page-break="true"
-                contentEditable={false}
-              >
-                {showChrome ? (
-                  <button
-                    type="button"
-                    className="page-break-remove"
-                    onClick={() => onRemovePageBreak(block.id)}
-                    title="Remove page break"
-                    aria-label="Remove page break"
-                  >
-                    <X size={12} />
-                  </button>
-                ) : null}
-              </div>
-            );
-          }
+        {blocks.map((block, index) => {
+          const isPageStart = block.type === "heading" && pageStartHeadingIds.has(block.id);
+          const isEmpty = isBlockTextEmpty(block.text);
+          const showPlaceholder =
+            block.type === "title" ||
+            block.type === "heading" ||
+            (block.type === "paragraph" && hasSingleStarterParagraph && index === 1);
 
           return (
             <div
               key={block.id}
               ref={(element) => onBlockRef(block.id, element)}
               data-block-id={block.id}
+              data-page-start={isPageStart ? "true" : undefined}
+              data-empty={isEmpty ? "true" : undefined}
               className={`editor-block block-${block.type}`}
-              data-placeholder={placeholderForType(block.type)}
+              data-placeholder={showPlaceholder ? placeholderForType(block.type) : undefined}
               tabIndex={-1}
               onFocus={() => onFocusBlock(block.id)}
-              onInput={(event) => onChangeBlock(block.id, event.currentTarget.innerHTML)}
-              onKeyDown={(event) => onBlockKeyDown(event, block)}
               dangerouslySetInnerHTML={{ __html: block.text }}
             />
           );
@@ -106,3 +102,6 @@ export function EditorCanvas({
     </main>
   );
 }
+
+export const EditorCanvas = memo(EditorCanvasComponent);
+EditorCanvas.displayName = "EditorCanvas";

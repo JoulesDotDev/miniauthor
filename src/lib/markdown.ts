@@ -1,7 +1,5 @@
 import type { Block, BlockType } from "@/lib/editor-types";
 
-export const PAGE_BREAK_TOKEN = "<!-- page-break -->";
-
 export function createId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -103,54 +101,76 @@ function htmlInlineToMarkdown(html: string): string {
     .trimEnd();
 }
 
-export function parseMarkdownToBlocks(markdown: string): Block[] {
-  const normalized = markdown.replace(/\r\n/g, "\n").trim();
-
-  if (!normalized) {
-    return [createBlock("title"), createBlock("paragraph")];
-  }
-
-  const chunks = normalized.split(/\n{2,}/g);
-  const blocks: Block[] = [];
-
-  for (const chunk of chunks) {
-    const trimmed = chunk.trim();
-
-    if (!trimmed) {
-      continue;
-    }
-
-    if (trimmed === PAGE_BREAK_TOKEN) {
-      blocks.push(createBlock("page-break"));
-      continue;
-    }
-
-    if (trimmed.startsWith("# ")) {
-      blocks.push(createBlock("title", normalizeInlineMarkdown(trimmed.slice(2).trim())));
-      continue;
-    }
-
-    if (trimmed.startsWith("## ")) {
-      blocks.push(createBlock("heading", normalizeInlineMarkdown(trimmed.slice(3).trim())));
-      continue;
-    }
-
-    blocks.push(createBlock("paragraph", normalizeInlineMarkdown(chunk)));
-  }
-
+export function normalizeBlocksForEditor(blocks: Block[]): Block[] {
   if (!blocks.length) {
     return [createBlock("title"), createBlock("paragraph")];
   }
 
-  return blocks;
-}
+  let changed = false;
+  let titleSeen = false;
 
-export function serializeBlocksToMarkdown(blocks: Block[]): string {
-  const markdownBlocks = blocks.map((block) => {
-    if (block.type === "page-break") {
-      return PAGE_BREAK_TOKEN;
+  const sanitized: Block[] = [];
+
+  for (const block of blocks as Array<{ id?: string; type?: string; text?: string }>) {
+    const rawType = block.type;
+
+    if (rawType !== "title" && rawType !== "heading" && rawType !== "paragraph") {
+      changed = true;
+      continue;
     }
 
+    let nextType: BlockType = rawType;
+
+    if (rawType === "title") {
+      if (titleSeen) {
+        nextType = "heading";
+        changed = true;
+      } else {
+        titleSeen = true;
+      }
+    }
+
+    const id = typeof block.id === "string" ? block.id : createId();
+    const text = typeof block.text === "string" ? block.text : "";
+
+    if (id !== block.id || text !== block.text || nextType !== rawType) {
+      changed = true;
+    }
+
+    sanitized.push({
+      id,
+      type: nextType,
+      text,
+    });
+  }
+
+  const titleIndex = sanitized.findIndex((block) => block.type === "title");
+
+  if (titleIndex === -1) {
+    sanitized.unshift(createBlock("title"));
+    changed = true;
+  } else if (titleIndex > 0) {
+    const [title] = sanitized.splice(titleIndex, 1);
+    sanitized.unshift(title);
+    changed = true;
+  }
+
+  if (sanitized.length === 1) {
+    sanitized.push(createBlock("paragraph"));
+    changed = true;
+  }
+
+  if (!changed && sanitized.length === blocks.length) {
+    return blocks;
+  }
+
+  return sanitized;
+}
+
+function serializeBlocks(blocks: Block[], ensureSingleTitle: boolean): string {
+  const source = ensureSingleTitle ? normalizeBlocksForEditor(blocks) : blocks;
+
+  const markdownBlocks = source.map((block) => {
     const markdownInline = htmlInlineToMarkdown(block.text).trim();
 
     if (block.type === "title") {
@@ -167,23 +187,71 @@ export function serializeBlocksToMarkdown(blocks: Block[]): string {
   return markdownBlocks.join("\n\n").trimEnd();
 }
 
+export function parseMarkdownToBlocks(markdown: string): Block[] {
+  const normalized = markdown.replace(/\r\n/g, "\n").trim();
+
+  if (!normalized) {
+    return [createBlock("title"), createBlock("paragraph")];
+  }
+
+  const chunks = normalized.split(/\n{2,}/g);
+  const blocks: Block[] = [];
+  let titleSeen = false;
+
+  for (const chunk of chunks) {
+    const trimmed = chunk.trim();
+
+    if (!trimmed) {
+      continue;
+    }
+
+    if (trimmed.startsWith("# ")) {
+      const titleText = normalizeInlineMarkdown(trimmed.slice(2).trim());
+
+      if (!titleSeen) {
+        blocks.push(createBlock("title", titleText));
+        titleSeen = true;
+      } else {
+        blocks.push(createBlock("heading", titleText));
+      }
+
+      continue;
+    }
+
+    if (trimmed.startsWith("## ")) {
+      blocks.push(createBlock("heading", normalizeInlineMarkdown(trimmed.slice(3).trim())));
+      continue;
+    }
+
+    blocks.push(createBlock("paragraph", normalizeInlineMarkdown(chunk)));
+  }
+
+  return normalizeBlocksForEditor(blocks);
+}
+
+export function serializeBlocksToMarkdown(blocks: Block[]): string {
+  return serializeBlocks(blocks, true);
+}
+
 export function splitBlocksToMarkdownPages(blocks: Block[]): string[] {
+  const normalized = normalizeBlocksForEditor(blocks);
   const pages: string[] = [];
   let currentPage: Block[] = [];
 
-  for (const block of blocks) {
-    if (block.type === "page-break") {
-      pages.push(serializeBlocksToMarkdown(currentPage));
+  for (const block of normalized) {
+    if (block.type === "heading" && currentPage.length > 0) {
+      pages.push(serializeBlocks(currentPage, false));
       currentPage = [];
-      continue;
     }
 
     currentPage.push(block);
   }
 
-  pages.push(serializeBlocksToMarkdown(currentPage));
+  if (currentPage.length) {
+    pages.push(serializeBlocks(currentPage, false));
+  }
 
-  return pages;
+  return pages.length ? pages : [serializeBlocks(normalized, true)];
 }
 
 export function joinMarkdownPagesToDocument(pages: string[]): string {
@@ -191,5 +259,5 @@ export function joinMarkdownPagesToDocument(pages: string[]): string {
     return "";
   }
 
-  return pages.join(`\n\n${PAGE_BREAK_TOKEN}\n\n`).trimEnd();
+  return pages.join("\n\n").trimEnd();
 }

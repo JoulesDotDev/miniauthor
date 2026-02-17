@@ -110,6 +110,7 @@ textarea {
 .editor-block {
   width: 100%;
   display: block;
+  position: relative;
   border: 0;
   outline: none;
   background: transparent;
@@ -121,12 +122,21 @@ textarea {
   white-space: pre-wrap;
   word-break: break-word;
   min-height: 1.65em;
+  direction: ltr;
+  unicode-bidi: plaintext;
 }
 
-.editor-block:empty::before {
+.editor-block[data-empty="true"][data-placeholder]::before {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
   content: attr(data-placeholder);
+  display: block;
   color: #a69c8f;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .block-title {
@@ -147,34 +157,6 @@ textarea {
 .block-paragraph {
   font-size: clamp(1.04rem, 1.45vw, 1.16rem);
   font-weight: 400;
-}
-
-.page-break {
-  position: relative;
-  height: 0;
-  margin: 34px 0;
-  border-top: 2px dotted rgba(106, 99, 89, 0.45);
-}
-
-.page-break-remove {
-  position: absolute;
-  right: 0;
-  top: -12px;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid rgba(143, 62, 50, 0.2);
-  background: rgba(229, 110, 91, 0.1);
-  color: rgba(143, 62, 50, 0.8);
-  border-radius: 999px;
-  padding: 0;
-  cursor: pointer;
-}
-
-.page-break-remove:hover {
-  background: rgba(229, 110, 91, 0.16);
-  border-color: rgba(143, 62, 50, 0.3);
 }
 
 .settings-panel {
@@ -222,17 +204,26 @@ textarea {
 }
 
 .shortcut-row kbd {
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
   border: 1px solid #d8cec1;
   border-bottom-color: #c4baae;
   border-radius: 8px;
   background: #fff;
   color: #544d45;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.1;
   padding: 4px 8px;
+}
+
+.shortcut-modifier {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .panel-left {

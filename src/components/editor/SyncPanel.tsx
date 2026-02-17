@@ -1,5 +1,6 @@
+import { useEditorChrome } from "@/contexts/EditorChromeContext";
+
 interface SyncPanelProps {
-  open: boolean;
   syncNotice: string;
   isConnected: boolean;
   isSyncing: boolean;
@@ -12,7 +13,6 @@ interface SyncPanelProps {
 }
 
 export function SyncPanel({
-  open,
   syncNotice,
   isConnected,
   isSyncing,
@@ -23,8 +23,10 @@ export function SyncPanel({
   onExportMarkdown,
   onExportSplitPages,
 }: SyncPanelProps) {
+  const { showChrome } = useEditorChrome();
+
   return (
-    <aside className={`settings-panel panel-right ${open ? "open" : ""}`}>
+    <aside className={`settings-panel panel-right ${showChrome ? "open" : ""}`}>
       <h2>Sync</h2>
       <p>{syncNotice}</p>
       <div className="button-row">
