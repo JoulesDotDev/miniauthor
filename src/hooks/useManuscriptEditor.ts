@@ -46,6 +46,7 @@ interface UseManuscriptEditorResult {
   handleBlockFocus: (blockId: string) => void;
   transformFocusedBlockType: (type: "heading" | "paragraph") => void;
   applyInlineFormat: (command: "bold" | "italic" | "underline") => void;
+  selectFocusedBlockContent: () => void;
   selectAllManuscript: () => void;
 }
 
@@ -135,6 +136,36 @@ export function useManuscriptEditor({
     selection.removeAllRanges();
     selection.addRange(range);
   }, []);
+
+  const selectFocusedBlockContent = useCallback(() => {
+    const selection = window.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const blockIdFromSelection = blockIdFromNode(selection.anchorNode);
+    const targetBlockId = blockIdFromSelection ?? focusedBlockIdRef.current;
+
+    if (!targetBlockId) {
+      selectAllManuscript();
+      return;
+    }
+
+    const target = blockRefs.current[targetBlockId];
+
+    if (!target) {
+      selectAllManuscript();
+      return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    focusedBlockIdRef.current = targetBlockId;
+    setFocusedBlockId(targetBlockId);
+  }, [selectAllManuscript]);
 
   const findEditableSibling = useCallback(
     (blockId: string, direction: -1 | 1): string | null => {
@@ -639,6 +670,7 @@ export function useManuscriptEditor({
     handleBlockFocus,
     transformFocusedBlockType,
     applyInlineFormat,
+    selectFocusedBlockContent,
     selectAllManuscript,
   };
 }

@@ -80,7 +80,7 @@ export function App() {
     handleBlockFocus,
     transformFocusedBlockType,
     applyInlineFormat,
-    selectAllManuscript,
+    selectFocusedBlockContent,
   } = editor;
 
   const {
@@ -142,7 +142,7 @@ export function App() {
 
       if (key === "a") {
         event.preventDefault();
-        selectAllManuscript();
+        selectFocusedBlockContent();
         return;
       }
 
@@ -191,7 +191,7 @@ export function App() {
     };
   }, [
     applyInlineFormat,
-    selectAllManuscript,
+    selectFocusedBlockContent,
     syncWithDropbox,
     toggleChrome,
     transformFocusedBlockType,
