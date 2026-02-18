@@ -68,8 +68,6 @@ export function App() {
     setUpdatedAt,
   });
   const {
-    currentPage,
-    totalPages,
     markdownPreview,
     showSelectionToolbar,
     setLexicalEditor,
@@ -176,8 +174,6 @@ export function App() {
         />
 
         <EditorCanvas
-          currentPage={currentPage}
-          totalPages={totalPages}
           blocks={blocks}
           onEditorReady={setLexicalEditor}
           onBlocksChange={handleEditorBlocksChange}

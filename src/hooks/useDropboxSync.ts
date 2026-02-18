@@ -268,7 +268,7 @@ export function useDropboxSync({
 
     const timeout = window.setTimeout(() => {
       void setStoredDocument(payload);
-    }, 2000);
+    }, 500);
 
     return () => {
       window.clearTimeout(timeout);

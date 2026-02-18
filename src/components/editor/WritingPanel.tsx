@@ -54,7 +54,10 @@ export function WritingPanel({
       <div className="meta-box">
         <div>Updated: {updatedAtText}</div>
         <div>Synced: {lastSyncedAtText}</div>
-        <div>{isOnline ? "Online" : "Offline"}</div>
+        <div className={`status-row ${isOnline ? "online" : "offline"}`}>
+          <span className="status-dot" aria-hidden="true" />
+          <span>{isOnline ? "Online" : "Offline"}</span>
+        </div>
       </div>
     </aside>
   );

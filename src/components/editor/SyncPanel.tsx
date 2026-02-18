@@ -1,4 +1,5 @@
 import { useEditorChrome } from "@/contexts/EditorChromeContext";
+import { FileDown, Files, Link2, RefreshCw, Unlink2 } from "lucide-react";
 
 interface SyncPanelProps {
   syncNotice: string;
@@ -31,21 +32,33 @@ export function SyncPanel({
       <p>{syncNotice}</p>
       <div className="button-row">
         {isConnected ? (
-          <button type="button" onClick={onDisconnect}>Disconnect</button>
+          <button type="button" onClick={onDisconnect}>
+            <Unlink2 size={15} />
+            <span>Disconnect</span>
+          </button>
         ) : (
-          <button type="button" onClick={onConnect}>Connect Dropbox</button>
+          <button type="button" onClick={onConnect}>
+            <Link2 size={15} />
+            <span>Connect Dropbox</span>
+          </button>
         )}
         <button type="button" onClick={onSync} disabled={isSyncing}>
-          {isSyncing ? "Syncing..." : "Sync Now"}
+          <RefreshCw size={15} className={isSyncing ? "button-icon-spin" : undefined} />
+          <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
         </button>
       </div>
+      <div className="panel-divider" aria-hidden="true" />
       <div className="button-row">
         <button type="button" onClick={onExportMarkdown}>
-          Export Manuscript
+          <FileDown size={15} />
+          <span>Export Manuscript</span>
         </button>
       </div>
       <div className="button-row">
-        <button type="button" onClick={onExportSplitPages}>Export split pages</button>
+        <button type="button" onClick={onExportSplitPages}>
+          <Files size={15} />
+          <span>Export split pages</span>
+        </button>
       </div>
       {!hasDropboxAppKey ? (
         <div className="warning-box">Set VITE_DROPBOX_APP_KEY and optionally VITE_DROPBOX_REDIRECT_URI.</div>

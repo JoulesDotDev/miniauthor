@@ -25,8 +25,6 @@ import {
 } from "@/lib/lexical-manuscript";
 
 interface EditorCanvasProps {
-  currentPage: number;
-  totalPages: number;
   blocks: Block[];
   onEditorReady: (editor: LexicalEditor | null) => void;
   onBlocksChange: (nextBlocks: Block[]) => void;
@@ -330,14 +328,12 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
 }
 
 function EditorCanvasComponent({
-  currentPage,
-  totalPages,
   blocks,
   onEditorReady,
   onBlocksChange,
   onSelectionToolbarChange,
 }: EditorCanvasProps) {
-  const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
+  const { menuLabel, toggleChrome } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
 
   const initialConfig = useMemo(
@@ -379,8 +375,6 @@ function EditorCanvasComponent({
       >
         {menuLabel}
       </button>
-
-      {showChrome ? <div className="page-indicator">{`${currentPage}/${totalPages}`}</div> : null}
 
       <LexicalComposer initialConfig={initialConfig}>
         <EditorReadyPlugin onEditorReady={onEditorReady} />
