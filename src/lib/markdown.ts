@@ -224,29 +224,31 @@ function serializeBlocks(blocks: Block[], ensureSingleTitle: boolean): string {
     return markdownInline;
   });
 
-  return markdownBlocks.join("\n\n").trimEnd();
+  return markdownBlocks.join("\n\n");
 }
 
 export function parseMarkdownToBlocks(markdown: string): Block[] {
-  const normalized = markdown.replace(/\r\n/g, "\n").trim();
+  const normalized = markdown.replace(/\r\n/g, "\n");
 
-  if (!normalized) {
+  if (normalized.trim().length === 0) {
     return [createBlock("title"), createBlock("paragraph")];
   }
 
-  const chunks = normalized.split(/\n{2,}/g);
+  // Split by exact paragraph separators so intentionally empty blocks are preserved.
+  const chunks = normalized.split(/\n{2}/g);
   const blocks: Block[] = [];
   let titleSeen = false;
 
   for (const chunk of chunks) {
     const trimmed = chunk.trim();
 
-    if (!trimmed) {
+    if (trimmed.length === 0) {
+      blocks.push(createBlock("paragraph", ""));
       continue;
     }
 
-    if (trimmed.startsWith("# ")) {
-      const titleText = normalizeInlineMarkdown(trimmed.slice(2).trim());
+    if (/^#(?:\s+|$)/.test(trimmed)) {
+      const titleText = normalizeInlineMarkdown(trimmed.slice(1).trimStart());
 
       if (!titleSeen) {
         blocks.push(createBlock("title", titleText));
@@ -258,13 +260,13 @@ export function parseMarkdownToBlocks(markdown: string): Block[] {
       continue;
     }
 
-    if (trimmed.startsWith("### ")) {
-      blocks.push(createBlock("heading2", normalizeInlineMarkdown(trimmed.slice(4).trim())));
+    if (/^###(?:\s+|$)/.test(trimmed)) {
+      blocks.push(createBlock("heading2", normalizeInlineMarkdown(trimmed.slice(3).trimStart())));
       continue;
     }
 
-    if (trimmed.startsWith("## ")) {
-      blocks.push(createBlock("heading1", normalizeInlineMarkdown(trimmed.slice(3).trim())));
+    if (/^##(?:\s+|$)/.test(trimmed)) {
+      blocks.push(createBlock("heading1", normalizeInlineMarkdown(trimmed.slice(2).trimStart())));
       continue;
     }
 
@@ -304,5 +306,5 @@ export function joinMarkdownPagesToDocument(pages: string[]): string {
     return "";
   }
 
-  return pages.join("\n\n").trimEnd();
+  return pages.join("\n\n");
 }

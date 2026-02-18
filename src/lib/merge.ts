@@ -50,7 +50,19 @@ function mergeBothChoiceLines(primary: string[], secondary: string[]): string[] 
     return [...primary];
   }
 
-  return [...primary, ...secondary];
+  const merged = [...primary];
+  const primaryEndsWithBlank = merged[merged.length - 1] === "";
+  const secondaryStartsWithBlank = secondary[0] === "";
+
+  // Keep both as separate markdown blocks (blank line between them) so
+  // they don't collapse into a single paragraph with a soft line break.
+  if (!primaryEndsWithBlank && !secondaryStartsWithBlank) {
+    merged.push("");
+  }
+
+  merged.push(...secondary);
+
+  return merged;
 }
 
 export function resolveLinesForChoice(hunk: DiffHunk, choice: DiffChoice): string[] {
@@ -82,7 +94,7 @@ function splitLines(text: string): string[] {
 }
 
 function joinLines(lines: string[]): string {
-  return lines.join("\n").trimEnd();
+  return lines.join("\n");
 }
 
 function areEqual(a: string[], b: string[]): boolean {

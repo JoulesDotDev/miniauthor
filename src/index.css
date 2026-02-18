@@ -312,6 +312,24 @@ textarea {
   color: var(--text-muted);
 }
 
+.sync-feedback-chip {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 43;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-main);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
 .floating-toggle {
   position: fixed;
   right: 22px;
@@ -1193,6 +1211,11 @@ textarea {
     top: auto;
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 10px;
+  }
+
+  .sync-feedback-chip {
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
   }
 
   .floating-toggle.mobile-os {

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Save } from "lucide-react";
 
 import { ConflictModal } from "@/components/editor/ConflictModal";
 import { EditorCanvas } from "@/components/editor/EditorCanvas";
@@ -14,6 +15,7 @@ import { createBlock, splitBlocksToMarkdownPages } from "@/lib/markdown";
 const THEME_STORAGE_KEY = "book-writer-theme";
 const APP_NAME = "Mini Author .app";
 const APP_VERSION = "1.0.0";
+const MIN_SYNC_FEEDBACK_MS = 500;
 
 function getStoredTheme(): "light" | "dark" | null {
   if (typeof window === "undefined") {
@@ -117,8 +119,10 @@ export function App() {
   const [showMap, setShowMap] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [showSyncFeedback, setShowSyncFeedback] = useState<boolean>(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => getStoredTheme() ?? getSystemTheme());
   const [hasThemeOverride, setHasThemeOverride] = useState<boolean>(() => getStoredTheme() !== null);
+  const syncFeedbackStartRef = useRef<number | null>(null);
 
   const isMac = useMemo(() => detectMacPlatform(), []);
   const isMobileOS = useMemo(() => detectMobileOSPlatform(), []);
@@ -227,6 +231,7 @@ export function App() {
   });
   const isConflictOpen = Boolean(conflict);
   const showMenuBrand = (showChrome || showMap) && !isConflictOpen;
+  const showSyncIndicator = showSyncFeedback && !showChrome && !showMap && !isConflictOpen;
 
   useEffect(() => {
     const refreshOnlineState = () => {
@@ -331,6 +336,42 @@ export function App() {
     };
   }, [handleSelectionToolbarChange, isConflictOpen]);
 
+  useEffect(() => {
+    let hideTimer: number | null = null;
+
+    if (isSyncing) {
+      syncFeedbackStartRef.current = Date.now();
+      setShowSyncFeedback(true);
+      return;
+    }
+
+    if (!showSyncFeedback) {
+      syncFeedbackStartRef.current = null;
+      return;
+    }
+
+    const startedAt = syncFeedbackStartRef.current ?? Date.now();
+    const elapsed = Date.now() - startedAt;
+    const remaining = Math.max(0, MIN_SYNC_FEEDBACK_MS - elapsed);
+
+    if (remaining === 0) {
+      setShowSyncFeedback(false);
+      syncFeedbackStartRef.current = null;
+      return;
+    }
+
+    hideTimer = window.setTimeout(() => {
+      setShowSyncFeedback(false);
+      syncFeedbackStartRef.current = null;
+    }, remaining);
+
+    return () => {
+      if (hideTimer !== null) {
+        window.clearTimeout(hideTimer);
+      }
+    };
+  }, [isSyncing, showSyncFeedback]);
+
   return (
     <EditorChromeProvider
       showChrome={showChrome}
@@ -353,6 +394,12 @@ export function App() {
             <img src="/mini-author-icon.svg" alt="" className="menu-brand-chip-icon" />
             <span className="menu-brand-chip-name">{APP_NAME}</span>
             <span className="menu-brand-chip-version">{APP_VERSION}</span>
+          </div>
+        ) : null}
+
+        {showSyncIndicator ? (
+          <div className={`sync-feedback-chip ${isSyncing ? "is-syncing" : ""}`} role="status" aria-live="polite">
+            <Save size={15} className={isSyncing ? "button-icon-spin" : undefined} />
           </div>
         ) : null}
 
