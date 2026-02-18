@@ -62,8 +62,8 @@ If `VITE_DROPBOX_REDIRECT_URI` is omitted, the app uses the current page URL.
 - `Cmd/Ctrl + S`: Sync now
 - `Cmd/Ctrl + B`: Toggle bold formatting
 - `Cmd/Ctrl + I`: Toggle italic formatting
-- `Cmd/Ctrl + 2`: Section headline block
-- `Cmd/Ctrl + 0`: Paragraph block
+- `Cmd/Ctrl + 1`: Section headline block
+- `Cmd/Ctrl + 2`: Paragraph block
 - `Cmd/Ctrl + A`: Select current block content
 - `Enter`: New paragraph block
 

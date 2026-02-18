@@ -200,10 +200,10 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
           return true;
         }
 
-        if (key === "2" || key === "0") {
+        if (key === "1" || key === "2") {
           event.preventDefault();
           editor.update(() => {
-            setSelectedTopLevelBlocksToType(key === "2" ? "heading" : "paragraph");
+            setSelectedTopLevelBlocksToType(key === "1" ? "heading" : "paragraph");
           });
           return true;
         }
