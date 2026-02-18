@@ -294,8 +294,8 @@ textarea {
 }
 
 .menu-brand-chip-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 5px;
   flex-shrink: 0;
 }
@@ -1190,7 +1190,8 @@ textarea {
   }
 
   .menu-brand-chip {
-    top: max(10px, env(safe-area-inset-top));
+    top: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
     left: 10px;
   }
 

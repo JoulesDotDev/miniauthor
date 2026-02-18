@@ -5,6 +5,27 @@ import { SplashScreen } from "@/components/SplashScreen";
 import "./index.css";
 import App from "./App";
 
+const THEME_STORAGE_KEY = "book-writer-theme";
+
+type AppTheme = "light" | "dark";
+
+function detectInitialTheme(): AppTheme {
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyDocumentTheme(theme: AppTheme): void {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.classList.toggle("dark", theme === "dark");
+}
+
+applyDocumentTheme(detectInitialTheme());
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     if (import.meta.env.PROD) {
@@ -27,7 +48,7 @@ function AppBootstrap() {
   useEffect(() => {
     const timerId = window.setTimeout(() => {
       setShowSplash(false);
-    }, 250);
+    }, 1000);
 
     return () => {
       window.clearTimeout(timerId);
