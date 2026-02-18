@@ -176,8 +176,8 @@
   --hover-paper-pressed: #352d22;
   --hover-paper-border: #7a6949;
 
-  --diff-added: color-mix(in oklab, #59c7d1 24%, transparent);
-  --diff-removed: color-mix(in oklab, #ef877d 24%, transparent);
+  --diff-added: color-mix(in oklab, #59c7d1 20%, transparent);
+  --diff-removed: color-mix(in oklab, #ef877d 20%, transparent);
 
   color-scheme: dark;
 }
@@ -885,9 +885,9 @@ textarea {
 }
 
 .conflict-actions-row button.is-active {
-  border-color: color-mix(in oklab, var(--line-strong) 30%, var(--accent));
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--hover-paper-border);
+  background: color-mix(in oklab, var(--hover-paper) 84%, var(--surface-muted));
+  color: var(--text-main);
 }
 
 .conflict-content {
@@ -958,9 +958,9 @@ textarea {
 }
 
 .conflict-hunk-actions button.is-active {
-  border-color: color-mix(in oklab, var(--line-strong) 30%, var(--accent));
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--hover-paper-border);
+  background: color-mix(in oklab, var(--hover-paper) 84%, var(--surface-muted));
+  color: var(--text-main);
 }
 
 .diff-grid {
@@ -1054,9 +1054,9 @@ textarea {
 }
 
 .conflict-hunk-preview-controls button.is-active {
-  border-color: color-mix(in oklab, var(--line-strong) 30%, var(--accent));
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--hover-paper-border);
+  background: color-mix(in oklab, var(--hover-paper) 84%, var(--surface-muted));
+  color: var(--text-main);
 }
 
 .conflict-hunk-preview-controls span {
@@ -1168,14 +1168,14 @@ textarea {
 }
 
 .conflict-footer-actions .conflict-close-button {
-  border-color: color-mix(in oklab, var(--line-subtle) 44%, var(--danger));
-  background: var(--danger-soft);
-  color: color-mix(in oklab, var(--danger) 84%, var(--text-main));
+  border-color: color-mix(in oklab, var(--line-subtle) 84%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 92%, var(--danger));
+  color: color-mix(in oklab, var(--text-main) 88%, var(--danger));
 }
 
 .conflict-footer-actions .conflict-close-button:hover {
-  border-color: color-mix(in oklab, var(--line-subtle) 36%, var(--danger));
-  background: color-mix(in oklab, var(--danger-soft) 76%, var(--danger));
+  border-color: color-mix(in oklab, var(--line-subtle) 78%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 86%, var(--danger));
 }
 
 @media (max-width: 1120px) {
