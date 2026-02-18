@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
-import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, type ElementNode as LexicalElementNode, type LexicalEditor, type LexicalNode } from "lexical";
+import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, UNDO_COMMAND, type ElementNode as LexicalElementNode, type LexicalEditor, type LexicalNode } from "lexical";
 import { HeadingNode, $isHeadingNode } from "@lexical/rich-text";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -370,6 +370,18 @@ function ManuscriptBehaviorPlugin({
         const key = event.key.toLowerCase();
 
         if (key === "z") {
+          if (event.shiftKey) {
+            return false;
+          }
+
+          event.preventDefault();
+
+          const undoHandled = editor.dispatchCommand(UNDO_COMMAND, undefined);
+
+          if (undoHandled) {
+            return true;
+          }
+
           let shouldRestoreTitle = false;
           editor.getEditorState().read(() => {
             const selectionInTitle = selectionTouchesTitleBlock();
@@ -384,7 +396,6 @@ function ManuscriptBehaviorPlugin({
             return false;
           }
 
-          event.preventDefault();
           const titleHtml = lastNonEmptyTitleHtmlRef.current;
 
           editor.update(() => {

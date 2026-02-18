@@ -1157,6 +1157,11 @@ textarea {
   margin: 0 0 12px;
 }
 
+.conflict-markdown p,
+.conflict-markdown li {
+  white-space: pre-wrap;
+}
+
 .conflict-markdown ul,
 .conflict-markdown ol {
   margin: 0 0 12px;

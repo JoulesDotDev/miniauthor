@@ -50,17 +50,19 @@ function mergeBothChoiceLines(primary: string[], secondary: string[]): string[] 
     return [...primary];
   }
 
-  const merged = [...primary];
-  const primaryEndsWithBlank = merged[merged.length - 1] === "";
-  const secondaryStartsWithBlank = secondary[0] === "";
+  const mergedPrimary = [...primary];
+  const mergedSecondary = [...secondary];
 
-  // Keep both as separate markdown blocks (blank line between them) so
-  // they don't collapse into a single paragraph with a soft line break.
-  if (!primaryEndsWithBlank && !secondaryStartsWithBlank) {
-    merged.push("");
+  while (mergedPrimary.length > 0 && mergedPrimary[mergedPrimary.length - 1] === "") {
+    mergedPrimary.pop();
   }
 
-  merged.push(...secondary);
+  while (mergedSecondary.length > 0 && mergedSecondary[0] === "") {
+    mergedSecondary.shift();
+  }
+
+  // Keep both as separate markdown blocks with exactly one blank line between.
+  const merged = [...mergedPrimary, "", ...mergedSecondary];
 
   return merged;
 }
@@ -507,14 +509,53 @@ export function composeResolvedFromHunks(
   choices: Record<string, DiffChoice>,
 ): string {
   const mergedLines: string[] = [];
+  const consumedEqualPrefix = new Map<string, number>();
 
-  for (const hunk of hunks) {
+  for (let index = 0; index < hunks.length; index += 1) {
+    const hunk = hunks[index];
+
     if (hunk.type === "equal") {
-      mergedLines.push(...hunk.localLines);
+      const skipCount = consumedEqualPrefix.get(hunk.id) ?? 0;
+      if (skipCount < hunk.localLines.length) {
+        mergedLines.push(...hunk.localLines.slice(skipCount));
+      }
       continue;
     }
 
     const selected = choices[hunk.id] ?? "local";
+
+    if (selected === "both_incoming_first" || selected === "both_local_first") {
+      const primaryLines = selected === "both_local_first" ? hunk.localLines : hunk.incomingLines;
+      const secondaryLines = selected === "both_local_first" ? hunk.incomingLines : hunk.localLines;
+      const nextHunk = hunks[index + 1];
+      const carryLines: string[] = [];
+
+      // If the next equal hunk starts with non-empty lines, treat them as
+      // same-block continuation (Shift+Enter style) and place "both" after that
+      // continuation so merged text doesn't land in the middle of a block.
+      if (nextHunk && nextHunk.type === "equal") {
+        const existingSkip = consumedEqualPrefix.get(nextHunk.id) ?? 0;
+        let nextSkip = existingSkip;
+
+        while (nextSkip < nextHunk.localLines.length) {
+          const line = nextHunk.localLines[nextSkip];
+          if (line === "") {
+            break;
+          }
+
+          carryLines.push(line);
+          nextSkip += 1;
+        }
+
+        if (nextSkip > existingSkip) {
+          consumedEqualPrefix.set(nextHunk.id, nextSkip);
+        }
+      }
+
+      mergedLines.push(...mergeBothChoiceLines([...primaryLines, ...carryLines], secondaryLines));
+      continue;
+    }
+
     mergedLines.push(...resolveLinesForChoice(hunk, selected));
   }
 
