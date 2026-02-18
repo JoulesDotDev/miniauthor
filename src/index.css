@@ -632,8 +632,8 @@ textarea {
 
 .conflict-header h3 {
   margin: 0;
-  font-size: 48px;
-  line-height: 1.05;
+  font-size: 34px;
+  line-height: 1.12;
   letter-spacing: -0.03em;
 }
 
@@ -814,6 +814,7 @@ textarea {
   border-radius: 14px;
   overflow: hidden;
   background: var(--surface-solid);
+  flex-shrink: 0;
 }
 
 .conflict-section-title {
@@ -995,7 +996,7 @@ textarea {
   }
 
   .conflict-header h3 {
-    font-size: 54px;
+    font-size: 36px;
   }
 
   .conflict-actions-row {
@@ -1020,11 +1021,6 @@ textarea {
 
   .diff-grid {
     grid-template-columns: 1fr;
-  }
-
-  .conflict-preview-body {
-    min-height: 260px;
-    max-height: 420px;
   }
 
   .conflict-footer-actions {

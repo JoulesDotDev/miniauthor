@@ -88,8 +88,6 @@ export function SyncPanel({
           <FileDown size={15} />
           <span>Export Manuscript</span>
         </button>
-      </div>
-      <div className="button-row">
         <button type="button" onClick={onExportSplitPages}>
           <Files size={15} />
           <span>Export split pages</span>

@@ -76,8 +76,8 @@ export function ConflictModal({
     <div className="conflict-overlay" role="dialog" aria-modal="true">
       <div className="conflict-modal">
         <header className="conflict-header">
-          <h3>Sync Conflict</h3>
-          <p>{conflict.reason ?? "Incoming and local edits overlap. Resolve each change below."}</p>
+          <h3>Review Changes</h3>
+          <p>{conflict.reason ?? "Dropbox and your current draft both changed. Choose what you want to keep."}</p>
         </header>
 
         <div className="conflict-actions-row">
