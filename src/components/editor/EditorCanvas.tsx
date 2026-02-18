@@ -48,6 +48,56 @@ function placeholderForType(type: Block["type"]): string {
   return "Start writting...";
 }
 
+function keepCaretComfortablyVisible(editor: LexicalEditor): void {
+  const rootElement = editor.getRootElement();
+
+  if (!rootElement) {
+    return;
+  }
+
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement) || activeElement !== rootElement) {
+    return;
+  }
+
+  const domSelection = window.getSelection();
+  if (!domSelection || domSelection.rangeCount === 0 || !domSelection.isCollapsed) {
+    return;
+  }
+
+  const range = domSelection.getRangeAt(0);
+  if (!rootElement.contains(range.startContainer)) {
+    return;
+  }
+
+  const rects = range.getClientRects();
+  let caretBottom: number | null = null;
+
+  if (rects.length > 0) {
+    caretBottom = rects[rects.length - 1].bottom;
+  } else {
+    const fallbackElement =
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as Element)
+        : range.startContainer.parentElement;
+
+    if (fallbackElement) {
+      caretBottom = fallbackElement.getBoundingClientRect().bottom;
+    }
+  }
+
+  if (caretBottom === null) {
+    return;
+  }
+
+  const comfortPadding = Math.max(120, Math.min(220, window.innerHeight * 0.26));
+  const targetBottom = window.innerHeight - comfortPadding;
+
+  if (caretBottom > targetBottom) {
+    window.scrollBy({ top: caretBottom - targetBottom, behavior: "auto" });
+  }
+}
+
 function decorateEditorBlocks(editor: LexicalEditor): void {
   editor.getEditorState().read(() => {
     const root = $getRoot();
@@ -153,6 +203,7 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
 
   useEffect(() => {
     let frameId: number | null = null;
+    let scrollFrameId: number | null = null;
 
     const scheduleDecoration = () => {
       if (frameId !== null) {
@@ -162,6 +213,17 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
       frameId = window.requestAnimationFrame(() => {
         frameId = null;
         decorateEditorBlocks(editor);
+      });
+    };
+
+    const scheduleComfortScroll = () => {
+      if (scrollFrameId !== null) {
+        window.cancelAnimationFrame(scrollFrameId);
+      }
+
+      scrollFrameId = window.requestAnimationFrame(() => {
+        scrollFrameId = null;
+        keepCaretComfortablyVisible(editor);
       });
     };
 
@@ -309,6 +371,7 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
 
       if (hasDocumentMutation) {
         onBlocksChange(nextBlocks);
+        scheduleComfortScroll();
       }
     });
 
@@ -321,6 +384,10 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
 
       if (frameId !== null) {
         window.cancelAnimationFrame(frameId);
+      }
+
+      if (scrollFrameId !== null) {
+        window.cancelAnimationFrame(scrollFrameId);
       }
     };
   }, [editor, onBlocksChange, onSelectionToolbarChange]);
