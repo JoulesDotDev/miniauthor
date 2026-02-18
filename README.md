@@ -62,12 +62,11 @@ If `VITE_DROPBOX_REDIRECT_URI` is omitted, the app uses the current page URL.
 - `Cmd/Ctrl + S`: Sync now
 - `Cmd/Ctrl + B`: Toggle bold formatting
 - `Cmd/Ctrl + I`: Toggle italic formatting
-- `Cmd/Ctrl + U`: Toggle underline formatting
 - `Cmd/Ctrl + 2`: Section headline block
 - `Cmd/Ctrl + 0`: Paragraph block
-- `Cmd/Ctrl + A`: Select all text in the manuscript
+- `Cmd/Ctrl + A`: Select current block content
 - `Enter`: New paragraph block
 
 ## Notes
 
-- npm network access was unavailable in this environment, so implementation uses native browser APIs and local utilities instead of external merge/editor SDK packages.
+- Editor engine is now Lexical for stable caret/selection behavior and block-level formatting controls.

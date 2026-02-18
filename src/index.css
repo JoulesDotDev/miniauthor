@@ -148,7 +148,7 @@ textarea {
 
 .block-heading {
   font-size: clamp(1.35rem, 2.3vw, 1.7rem);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   margin-top: 10px;
   margin-bottom: 6px;
@@ -157,6 +157,14 @@ textarea {
 .block-paragraph {
   font-size: clamp(1.04rem, 1.45vw, 1.16rem);
   font-weight: 400;
+}
+
+.editor-text-bold {
+  font-weight: 700;
+}
+
+.editor-text-italic {
+  font-style: italic;
 }
 
 .settings-panel {

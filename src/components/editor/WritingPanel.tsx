@@ -13,7 +13,6 @@ function getShortcuts(isMac: boolean): Array<{ key: string; action: string }> {
     { key: `${mod} S`, action: "Sync now" },
     { key: `${mod} B`, action: "Bold" },
     { key: `${mod} I`, action: "Italic" },
-    { key: `${mod} U`, action: "Underline" },
     { key: `${mod} 2`, action: "Section headline" },
     { key: `${mod} 0`, action: "Paragraph" },
     { key: "Enter", action: "New block" },

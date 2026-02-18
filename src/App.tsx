@@ -72,15 +72,11 @@ export function App() {
     totalPages,
     markdownPreview,
     showSelectionToolbar,
-    pageStartHeadingIds,
-    setPaperRef,
-    handlePaperInput,
-    handlePaperKeyDown,
-    handleBlockRef,
-    handleBlockFocus,
+    setLexicalEditor,
+    handleEditorBlocksChange,
+    handleSelectionToolbarChange,
     transformFocusedBlockType,
     applyInlineFormat,
-    selectFocusedBlockContent,
   } = editor;
 
   const {
@@ -128,6 +124,10 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+
       if (event.key === "Alt" && !event.repeat) {
         event.preventDefault();
         toggleChrome();
@@ -140,48 +140,11 @@ export function App() {
 
       const key = event.key.toLowerCase();
 
-      if (key === "a") {
-        event.preventDefault();
-        selectFocusedBlockContent();
-        return;
-      }
-
       if (key === "s") {
         event.preventDefault();
         void syncWithDropbox();
         return;
       }
-
-      if (key === "b") {
-        event.preventDefault();
-        applyInlineFormat("bold");
-        return;
-      }
-
-      if (key === "i") {
-        event.preventDefault();
-        applyInlineFormat("italic");
-        return;
-      }
-
-      if (key === "u") {
-        event.preventDefault();
-        applyInlineFormat("underline");
-        return;
-      }
-
-      if (key === "2") {
-        event.preventDefault();
-        transformFocusedBlockType("heading");
-        return;
-      }
-
-      if (key === "0") {
-        event.preventDefault();
-        transformFocusedBlockType("paragraph");
-        return;
-      }
-
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -190,11 +153,8 @@ export function App() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [
-    applyInlineFormat,
-    selectFocusedBlockContent,
     syncWithDropbox,
     toggleChrome,
-    transformFocusedBlockType,
   ]);
 
   return (
@@ -210,7 +170,6 @@ export function App() {
           visible={showSelectionToolbar}
           onBold={() => applyInlineFormat("bold")}
           onItalic={() => applyInlineFormat("italic")}
-          onUnderline={() => applyInlineFormat("underline")}
           onHeading={() => transformFocusedBlockType("heading")}
           onParagraph={() => transformFocusedBlockType("paragraph")}
         />
@@ -218,13 +177,10 @@ export function App() {
         <EditorCanvas
           currentPage={currentPage}
           totalPages={totalPages}
-          pageStartHeadingIds={pageStartHeadingIds}
           blocks={blocks}
-          onPaperRef={setPaperRef}
-          onPaperInput={handlePaperInput}
-          onPaperKeyDown={handlePaperKeyDown}
-          onFocusBlock={handleBlockFocus}
-          onBlockRef={handleBlockRef}
+          onEditorReady={setLexicalEditor}
+          onBlocksChange={handleEditorBlocksChange}
+          onSelectionToolbarChange={handleSelectionToolbarChange}
         />
 
         <SyncPanel
