@@ -1,6 +1,7 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
+import { SplashScreen } from "@/components/SplashScreen";
 import "./index.css";
 import App from "./App";
 
@@ -20,8 +21,24 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+function AppBootstrap() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setShowSplash(false);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, []);
+
+  return showSplash ? <SplashScreen /> : <App />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <AppBootstrap />
   </StrictMode>,
 );

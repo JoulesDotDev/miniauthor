@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="miniAuthorPaper" x1="44" y1="44" x2="468" y2="468" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f3ead7" />
+      <stop offset="1" stop-color="#fbf8ef" />
+    </linearGradient>
+  </defs>
+  <rect x="44" y="44" width="424" height="424" rx="108" fill="url(#miniAuthorPaper)" stroke="#d6c4a2" stroke-width="16" />
+  <path d="M256 124 352 228 256 388 160 228Z" fill="#5c5243" />
+  <circle cx="256" cy="244" r="27" fill="#f1e8d6" />
+  <path d="M256 274 220 338h72z" fill="#b4a086" />
+  <path d="M188 404h136" stroke="#8d7e66" stroke-width="22" stroke-linecap="round" opacity="0.9" />
+</svg>

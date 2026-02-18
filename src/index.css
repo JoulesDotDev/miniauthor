@@ -205,6 +205,49 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--app-bg);
+}
+
+.splash-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.splash-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+}
+
+.splash-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+  font-family: var(--ui-font);
+}
+
+.splash-wordmark-main {
+  color: var(--text-main);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.splash-wordmark-app {
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 ::selection {
   background: var(--accent-soft);
 }
@@ -230,6 +273,43 @@ textarea {
   min-height: 100vh;
   padding: 28px 28px 120px;
   transition: padding 0.24s ease;
+}
+
+.menu-brand-chip {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 43;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-main);
+  pointer-events: none;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.menu-brand-chip-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.menu-brand-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.menu-brand-chip-version {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 .floating-toggle {
@@ -1107,6 +1187,11 @@ textarea {
 @media (max-width: 760px) {
   .editor-shell {
     padding: 16px 12px 88px;
+  }
+
+  .menu-brand-chip {
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
   }
 
   .floating-toggle.mobile-os {

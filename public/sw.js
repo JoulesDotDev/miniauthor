@@ -1,5 +1,5 @@
-const CACHE_NAME = "book-writer-shell-v1";
-const PRECACHE = ["/", "/index.html", "/manifest.webmanifest"];
+const CACHE_NAME = "mini-author-shell-v2";
+const PRECACHE = ["/", "/index.html", "/manifest.webmanifest", "/mini-author-icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

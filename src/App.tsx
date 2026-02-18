@@ -12,6 +12,8 @@ import type { Block } from "@/lib/editor-types";
 import { createBlock, splitBlocksToMarkdownPages } from "@/lib/markdown";
 
 const THEME_STORAGE_KEY = "book-writer-theme";
+const APP_NAME = "Mini Author .app";
+const APP_VERSION = "1.0.0";
 
 function getStoredTheme(): "light" | "dark" | null {
   if (typeof window === "undefined") {
@@ -224,6 +226,7 @@ export function App() {
     dropboxRedirectUri,
   });
   const isConflictOpen = Boolean(conflict);
+  const showMenuBrand = (showChrome || showMap) && !isConflictOpen;
 
   useEffect(() => {
     const refreshOnlineState = () => {
@@ -345,6 +348,14 @@ export function App() {
           }
         }}
       >
+        {showMenuBrand ? (
+          <div className="menu-brand-chip" aria-hidden="true">
+            <img src="/mini-author-icon.svg" alt="" className="menu-brand-chip-icon" />
+            <span className="menu-brand-chip-name">{APP_NAME}</span>
+            <span className="menu-brand-chip-version">{APP_VERSION}</span>
+          </div>
+        ) : null}
+
         <MapPanel
           open={showMap && !isConflictOpen}
           items={outlineItems}
