@@ -16,6 +16,11 @@ export interface DropboxUploadResult {
   rev: string;
 }
 
+function removeOauthParamsFromUrl(): void {
+  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
 function base64UrlEncode(bytes: Uint8Array): string {
   const stringValue = String.fromCharCode(...bytes);
   const base64 = btoa(stringValue);
@@ -145,8 +150,19 @@ export async function finishDropboxAuthIfNeeded(
   redirectUri: string,
 ): Promise<DropboxTokenState | null> {
   const url = new URL(window.location.href);
+  const oauthError = url.searchParams.get("error");
+  const oauthErrorDescription = url.searchParams.get("error_description");
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+
+  if (oauthError) {
+    sessionStorage.removeItem(OAUTH_STATE_KEY);
+    sessionStorage.removeItem(OAUTH_VERIFIER_KEY);
+    removeOauthParamsFromUrl();
+    throw new Error(
+      `Dropbox authorization failed: ${oauthErrorDescription ?? oauthError}`,
+    );
+  }
 
   if (!code) {
     return null;
@@ -156,6 +172,9 @@ export async function finishDropboxAuthIfNeeded(
   const verifier = sessionStorage.getItem(OAUTH_VERIFIER_KEY);
 
   if (!expectedState || !verifier || state !== expectedState) {
+    sessionStorage.removeItem(OAUTH_STATE_KEY);
+    sessionStorage.removeItem(OAUTH_VERIFIER_KEY);
+    removeOauthParamsFromUrl();
     throw new Error("Dropbox OAuth state mismatch. Please try connecting again.");
   }
 
@@ -163,9 +182,7 @@ export async function finishDropboxAuthIfNeeded(
 
   sessionStorage.removeItem(OAUTH_STATE_KEY);
   sessionStorage.removeItem(OAUTH_VERIFIER_KEY);
-
-  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
-  window.history.replaceState({}, document.title, cleanUrl);
+  removeOauthParamsFromUrl();
 
   return token;
 }

@@ -293,7 +293,8 @@ export function buildSideBySideDiffRows(localText: string, remoteText: string): 
   let localNumber = 1;
   let remoteNumber = 1;
 
-  for (const op of ops) {
+  for (let index = 0; index < ops.length; index += 1) {
+    const op = ops[index];
     if (op.type === "equal") {
       for (const line of op.items) {
         rows.push({
@@ -311,6 +312,37 @@ export function buildSideBySideDiffRows(localText: string, remoteText: string): 
     }
 
     if (op.type === "delete") {
+      const next = ops[index + 1];
+
+      if (next && next.type === "insert") {
+        const pairedLength = Math.max(op.items.length, next.items.length);
+
+        for (let pairedIndex = 0; pairedIndex < pairedLength; pairedIndex += 1) {
+          const localLine = op.items[pairedIndex];
+          const remoteLine = next.items[pairedIndex];
+
+          rows.push({
+            localNumber: localLine === undefined ? null : localNumber,
+            remoteNumber: remoteLine === undefined ? null : remoteNumber,
+            localText: localLine ?? "",
+            remoteText: remoteLine ?? "",
+            localStatus: localLine === undefined ? "empty" : "removed",
+            remoteStatus: remoteLine === undefined ? "empty" : "added",
+          });
+
+          if (localLine !== undefined) {
+            localNumber += 1;
+          }
+
+          if (remoteLine !== undefined) {
+            remoteNumber += 1;
+          }
+        }
+
+        index += 1;
+        continue;
+      }
+
       for (const line of op.items) {
         rows.push({
           localNumber,

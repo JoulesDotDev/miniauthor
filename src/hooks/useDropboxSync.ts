@@ -26,6 +26,10 @@ import {
 
 const DROPBOX_PATH = "/manuscript.md";
 
+function isDropboxAuthError(errorMessage: string): boolean {
+  return /invalid_grant|invalid_access_token|expired_access_token|401/i.test(errorMessage);
+}
+
 interface UseDropboxSyncArgs {
   blocks: Block[];
   setBlocks: Dispatch<SetStateAction<Block[]>>;
@@ -104,6 +108,31 @@ export function useDropboxSync({
       const localMarkdown = serializeBlocksToMarkdown(blocks);
       const remoteFile = await dropboxDownloadFile(validToken.accessToken, DROPBOX_PATH);
       const remoteMarkdown = remoteFile?.content ?? "";
+      const isFirstSync =
+        lastSyncedAt === null &&
+        remoteRev === null &&
+        baseMarkdown.trim().length === 0;
+      const hasLocalDraft = localMarkdown.trim().length > 0;
+      const hasRemoteDraft = remoteMarkdown.trim().length > 0;
+
+      if (
+        isFirstSync &&
+        remoteFile &&
+        hasLocalDraft &&
+        hasRemoteDraft &&
+        localMarkdown !== remoteMarkdown
+      ) {
+        setConflict({
+          base: "",
+          local: localMarkdown,
+          remote: remoteMarkdown,
+          resolved: localMarkdown,
+          reason: "First sync found both local and Dropbox drafts. Choose one or merge manually.",
+        });
+        setSyncNotice("First sync conflict: local and Dropbox both contain writing.");
+        return false;
+      }
+
       const mergeResult = threeWayMergeText(baseMarkdown, localMarkdown, remoteMarkdown);
 
       if (mergeResult.status === "conflict") {
@@ -139,12 +168,30 @@ export function useDropboxSync({
       return true;
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown Dropbox error.";
-      setSyncNotice(detail);
+
+      if (isDropboxAuthError(detail)) {
+        setDropboxToken(null);
+        setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+      } else {
+        setSyncNotice(detail);
+      }
+
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [baseMarkdown, blocks, dropboxAppKey, dropboxToken, isOnline, isSyncing, remoteRev, setBlocks, setUpdatedAt]);
+  }, [
+    baseMarkdown,
+    blocks,
+    dropboxAppKey,
+    dropboxToken,
+    isOnline,
+    isSyncing,
+    lastSyncedAt,
+    remoteRev,
+    setBlocks,
+    setUpdatedAt,
+  ]);
 
   const connectDropbox = useCallback(async () => {
     if (!dropboxAppKey) {
@@ -157,6 +204,7 @@ export function useDropboxSync({
 
   const disconnectDropbox = useCallback(() => {
     setDropboxToken(null);
+    setConflict(null);
     setSyncNotice("Dropbox disconnected locally.");
   }, []);
 
@@ -190,7 +238,13 @@ export function useDropboxSync({
       setSyncNotice("Conflict resolved and synced to Dropbox.");
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Conflict upload failed.";
-      setSyncNotice(detail);
+
+      if (isDropboxAuthError(detail)) {
+        setDropboxToken(null);
+        setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+      } else {
+        setSyncNotice(detail);
+      }
     } finally {
       setIsSyncing(false);
     }
