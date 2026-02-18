@@ -120,6 +120,7 @@ export function App() {
     dropboxAppKey,
     dropboxRedirectUri,
   });
+  const isConflictOpen = Boolean(conflict);
 
   useEffect(() => {
     const refreshOnlineState = () => {
@@ -166,6 +167,10 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (isConflictOpen) {
+        return;
+      }
+
       if (event.defaultPrevented) {
         return;
       }
@@ -195,14 +200,33 @@ export function App() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [
+    isConflictOpen,
     syncWithDropbox,
     toggleChrome,
   ]);
 
+  useEffect(() => {
+    if (!isConflictOpen) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    handleSelectionToolbarChange(false);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [handleSelectionToolbarChange, isConflictOpen]);
+
   return (
     <EditorChromeProvider showChrome={showChrome} toggleChrome={toggleChrome} isMac={isMac}>
       <div
-        className={`app-shell ${showChrome ? "chrome-visible" : ""}`}
+        className={`app-shell ${showChrome ? "chrome-visible" : ""} ${isConflictOpen ? "conflict-open" : ""}`}
         onPointerDownCapture={(event) => {
           const target = event.target as HTMLElement;
 
@@ -212,7 +236,7 @@ export function App() {
         }}
       >
         <SelectionToolbar
-          visible={showSelectionToolbar}
+          visible={showSelectionToolbar && !isConflictOpen}
           onBold={() => applyInlineFormat("bold")}
           onItalic={() => applyInlineFormat("italic")}
           onHeading1={() => transformFocusedBlockType("heading1")}

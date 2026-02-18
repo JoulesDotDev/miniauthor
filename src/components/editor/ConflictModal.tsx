@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 import type { ConflictState } from "@/lib/app-types";
 import { buildDiffHunks, composeResolvedFromHunks, type DiffChoice } from "@/lib/merge";
@@ -34,15 +35,22 @@ export function ConflictModal({
     [hunks],
   );
   const [hunkChoices, setHunkChoices] = useState<Record<string, DiffChoice>>({});
+  const [isSaveConfirming, setIsSaveConfirming] = useState<boolean>(false);
+  const allFromDropboxSelected = changeHunks.length > 0
+    && changeHunks.every((hunk) => hunkChoices[hunk.id] === "incoming");
+  const allLocalSelected = changeHunks.length > 0
+    && changeHunks.every((hunk) => hunkChoices[hunk.id] === "local");
 
   useEffect(() => {
     if (!conflict) {
       setHunkChoices({});
+      setIsSaveConfirming(false);
       return;
     }
 
     const defaultChoice: DiffChoice = "local";
     setHunkChoices(makeChoiceMap(changeHunks.map((hunk) => hunk.id), defaultChoice));
+    setIsSaveConfirming(false);
   }, [conflict?.local, conflict?.remote, changeHunks]);
 
   const resolvedMarkdown = useMemo(
@@ -67,7 +75,7 @@ export function ConflictModal({
   return (
     <div className="conflict-overlay" role="dialog" aria-modal="true">
       <div className="conflict-modal">
-        <header>
+        <header className="conflict-header">
           <h3>Sync Conflict</h3>
           <p>{conflict.reason ?? "Incoming and local edits overlap. Resolve each change below."}</p>
         </header>
@@ -75,23 +83,25 @@ export function ConflictModal({
         <div className="conflict-actions-row">
           <button
             type="button"
+            className={allFromDropboxSelected ? "is-active" : undefined}
+            aria-pressed={allFromDropboxSelected}
             onClick={() => {
-              const confirmed = window.confirm("Replace the whole draft with the incoming Dropbox version?");
-              if (!confirmed) {
-                return;
+              if (!allFromDropboxSelected) {
+                setIsSaveConfirming(false);
               }
 
               setHunkChoices(makeChoiceMap(changeHunks.map((hunk) => hunk.id), "incoming"));
             }}
           >
-            Use All Incoming
+            Use All from Dropbox
           </button>
           <button
             type="button"
+            className={allLocalSelected ? "is-active" : undefined}
+            aria-pressed={allLocalSelected}
             onClick={() => {
-              const confirmed = window.confirm("Keep the whole local draft and discard incoming changes?");
-              if (!confirmed) {
-                return;
+              if (!allLocalSelected) {
+                setIsSaveConfirming(false);
               }
 
               setHunkChoices(makeChoiceMap(changeHunks.map((hunk) => hunk.id), "local"));
@@ -101,101 +111,122 @@ export function ConflictModal({
           </button>
         </div>
 
-        <div className="conflict-hunk-list">
-          {changeHunks.length === 0 ? (
-            <p className="conflict-empty">No line-level diff hunks were detected.</p>
-          ) : (
-            changeHunks.map((hunk, index) => {
-              const currentChoice = hunkChoices[hunk.id] ?? "local";
+        <div className="conflict-content">
+          <div className="conflict-list-label">Diff Chunks</div>
+          <div className="conflict-hunk-list">
+            {changeHunks.length === 0 ? (
+              <p className="conflict-empty">No line-level diff hunks were detected.</p>
+            ) : (
+              changeHunks.map((hunk, index) => {
+                const currentChoice = hunkChoices[hunk.id] ?? "local";
 
-              return (
-                <section key={hunk.id} className="conflict-hunk">
-                  <div className="conflict-hunk-header">
-                    <span>{`Change ${index + 1}`}</span>
-                    <div className="conflict-hunk-actions">
-                      <button
-                        type="button"
-                        className={currentChoice === "incoming" ? "is-active" : undefined}
-                        onClick={() => {
-                          setHunkChoices((current) => ({
-                            ...current,
-                            [hunk.id]: "incoming",
-                          }));
-                        }}
-                      >
-                        Take Incoming
-                      </button>
-                      <button
-                        type="button"
-                        className={currentChoice === "local" ? "is-active" : undefined}
-                        onClick={() => {
-                          setHunkChoices((current) => ({
-                            ...current,
-                            [hunk.id]: "local",
-                          }));
-                        }}
-                      >
-                        Take Local
-                      </button>
-                    </div>
-                  </div>
+                return (
+                  <section key={hunk.id} className="conflict-hunk">
+                    <div className="conflict-hunk-header">
+                      <span>{`Change ${index + 1}`}</span>
+                      <div className="conflict-hunk-actions">
+                        <button
+                          type="button"
+                          className={currentChoice === "incoming" ? "is-active" : undefined}
+                          onClick={() => {
+                            if (currentChoice !== "incoming") {
+                              setIsSaveConfirming(false);
+                            }
 
-                  <div className="diff-grid" aria-label="Change hunk diff">
-                    <div className="diff-pane">
-                      <h4>Incoming</h4>
-                      <div className="diff-body">
-                        {(hunk.incomingLines.length ? hunk.incomingLines : [""]).map((line, lineIndex) => (
-                          <div key={`incoming-${hunk.id}-${lineIndex}`} className={`diff-line ${line ? "added" : "empty"}`}>
-                            <span className="line-number">
-                              {line ? (hunk.incomingStart ?? 0) + lineIndex : ""}
-                            </span>
-                            <code>{line || " "}</code>
-                          </div>
-                        ))}
+                            setHunkChoices((current) => ({
+                              ...current,
+                              [hunk.id]: "incoming",
+                            }));
+                          }}
+                        >
+                          Take from Dropbox
+                        </button>
+                        <button
+                          type="button"
+                          className={currentChoice === "local" ? "is-active" : undefined}
+                          onClick={() => {
+                            if (currentChoice !== "local") {
+                              setIsSaveConfirming(false);
+                            }
+
+                            setHunkChoices((current) => ({
+                              ...current,
+                              [hunk.id]: "local",
+                            }));
+                          }}
+                        >
+                          Take Local
+                        </button>
                       </div>
                     </div>
 
-                    <div className="diff-pane">
-                      <h4>Local</h4>
-                      <div className="diff-body">
-                        {(hunk.localLines.length ? hunk.localLines : [""]).map((line, lineIndex) => (
-                          <div key={`local-${hunk.id}-${lineIndex}`} className={`diff-line ${line ? "removed" : "empty"}`}>
-                            <span className="line-number">
-                              {line ? (hunk.localStart ?? 0) + lineIndex : ""}
-                            </span>
-                            <code>{line || " "}</code>
-                          </div>
-                        ))}
+                    <div className="diff-grid" aria-label="Change hunk diff">
+                      <div className="diff-pane">
+                        <h4>Dropbox</h4>
+                        <div className="diff-body">
+                          {(hunk.incomingLines.length ? hunk.incomingLines : [""]).map((line, lineIndex) => (
+                            <div key={`incoming-${hunk.id}-${lineIndex}`} className={`diff-line ${line ? "added" : "empty"}`}>
+                              <span className="line-number">
+                                {line ? (hunk.incomingStart ?? 0) + lineIndex : ""}
+                              </span>
+                              <code>{line || " "}</code>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="diff-pane">
+                        <h4>Local</h4>
+                        <div className="diff-body">
+                          {(hunk.localLines.length ? hunk.localLines : [""]).map((line, lineIndex) => (
+                            <div key={`local-${hunk.id}-${lineIndex}`} className={`diff-line ${line ? "removed" : "empty"}`}>
+                              <span className="line-number">
+                                {line ? (hunk.localStart ?? 0) + lineIndex : ""}
+                              </span>
+                              <code>{line || " "}</code>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </section>
-              );
-            })
-          )}
+                  </section>
+                );
+              })
+            )}
+          </div>
+
+          <section className="conflict-preview-section">
+            <div className="conflict-section-title">Resolved Preview</div>
+            <div className="conflict-preview-body">
+              {resolvedMarkdown.trim().length === 0 ? (
+                <p className="conflict-empty">No content yet.</p>
+              ) : (
+                <div className="conflict-markdown">
+                  <ReactMarkdown>{resolvedMarkdown}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
 
-        <label className="resolve-label" htmlFor="resolved-markdown">
-          Resolved Markdown
-        </label>
-        <textarea
-          id="resolved-markdown"
-          value={resolvedMarkdown}
-          readOnly
-        />
-
-        <div className="button-row">
+        <div className="button-row conflict-footer-actions">
+          <button type="button" onClick={onClose} className="conflict-close-button">Close</button>
           <button
             type="button"
             onClick={() => {
+              if (!isSaveConfirming) {
+                setIsSaveConfirming(true);
+                return;
+              }
+
               onChangeResolved(resolvedMarkdown);
               onSaveResolution();
+              setIsSaveConfirming(false);
             }}
             disabled={isSyncing}
           >
-            Save Resolution
+            {isSaveConfirming ? "Are you sure?" : "Save Resolution"}
           </button>
-          <button type="button" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

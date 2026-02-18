@@ -111,6 +111,11 @@ textarea {
   min-height: 100vh;
 }
 
+.app-shell.conflict-open > :not(.conflict-overlay) {
+  pointer-events: none;
+  user-select: none;
+}
+
 .editor-shell {
   width: 100%;
   padding: 32px 20px 100px;
@@ -466,27 +471,33 @@ textarea {
   z-index: 60;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 12px;
 }
 
 .conflict-modal {
-  width: min(1120px, 100%);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
+  width: min(1240px, calc(100vw - 24px));
+  height: min(860px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
   background: var(--modal-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
-  box-shadow: var(--modal-shadow);
-  padding: 18px;
+  border: 1px solid color-mix(in oklab, var(--panel-border) 85%, transparent);
+  border-radius: 14px;
+  box-shadow: var(--soft-shadow);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-.conflict-modal h3 {
+.conflict-header h3 {
   margin: 0;
   font-size: 22px;
 }
 
-.conflict-modal header p {
-  margin: 8px 0 14px;
+.conflict-header p {
+  margin: 8px 0 0;
   color: var(--ink-muted);
   font-size: 13px;
 }
@@ -495,7 +506,6 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .conflict-actions-row button {
@@ -508,10 +518,64 @@ textarea {
   cursor: pointer;
 }
 
+.conflict-actions-row button.is-active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 20%, var(--button-bg));
+}
+
+.conflict-content {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.conflict-list-label {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  padding: 0 2px;
+}
+
+.conflict-preview-section {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--diff-body-bg);
+  overflow: hidden;
+}
+
+.conflict-section-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--diff-header-bg);
+}
+
 .conflict-hunk-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin-bottom: 12px;
+  padding: 0;
+}
+
+.conflict-preview-body {
+  padding: 10px;
+}
+
+.conflict-preview-body {
+  min-height: 300px;
+  max-height: 500px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .conflict-empty {
@@ -522,9 +586,9 @@ textarea {
 
 .conflict-hunk {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 10px;
   background: var(--diff-body-bg);
+  overflow: hidden;
 }
 
 .conflict-hunk-header {
@@ -532,7 +596,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 11px;
   border-bottom: 1px solid var(--line);
   background: var(--diff-header-bg);
   font-size: 12px;
@@ -563,14 +627,15 @@ textarea {
 .diff-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  padding: 10px;
 }
 
 .diff-pane {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
+  background: var(--diff-body-bg);
 }
 
 .diff-pane h4 {
@@ -585,8 +650,6 @@ textarea {
 }
 
 .diff-body {
-  max-height: 320px;
-  overflow: auto;
   background: var(--diff-body-bg);
 }
 
@@ -607,9 +670,14 @@ textarea {
 
 .diff-line code {
   white-space: pre-wrap;
+  word-break: break-word;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   color: var(--code-text);
+}
+
+.diff-line.empty code {
+  opacity: 0.5;
 }
 
 .diff-line.removed {
@@ -620,23 +688,81 @@ textarea {
   background: var(--conflict-added);
 }
 
-.resolve-label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: var(--ink-muted);
+.conflict-markdown {
+  font-family: var(--manuscript-font);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
 }
 
-.conflict-modal textarea {
-  width: 100%;
-  min-height: 160px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
-  resize: vertical;
-  background: var(--diff-body-bg);
+.conflict-markdown > :first-child {
+  margin-top: 0;
+}
+
+.conflict-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.conflict-markdown h1,
+.conflict-markdown h2,
+.conflict-markdown h3 {
+  line-height: 1.24;
+  margin: 0 0 10px;
+}
+
+.conflict-markdown h1 {
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.conflict-markdown h2 {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.conflict-markdown h3 {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.conflict-markdown p {
+  margin: 0 0 12px;
+}
+
+.conflict-markdown ul,
+.conflict-markdown ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.conflict-markdown code {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
-  font-size: 13px;
+}
+
+.conflict-markdown pre {
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--panel-item-bg) 92%, transparent);
+  overflow: auto;
+}
+
+.conflict-footer-actions {
+  margin-top: 22px;
+  padding-top: 0;
+  border-top: 0;
+  grid-template-columns: 1fr 1fr;
+}
+
+.conflict-footer-actions .conflict-close-button {
+  border-color: color-mix(in oklab, var(--danger) 42%, var(--panel-border));
+  background: color-mix(in oklab, var(--danger) 20%, var(--button-bg));
+  color: color-mix(in oklab, var(--danger) 78%, var(--ink));
+}
+
+.conflict-footer-actions .conflict-close-button:hover {
+  background: color-mix(in oklab, var(--danger) 30%, var(--button-bg));
 }
 
 @media (max-width: 1080px) {
@@ -705,13 +831,25 @@ textarea {
   }
 
   .conflict-overlay {
-    padding: 10px;
+    padding: 0;
   }
 
   .conflict-modal {
-    max-height: calc(100vh - 20px);
-    padding: 12px;
-    border-radius: 12px;
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .conflict-content {
+    gap: 10px;
+  }
+
+  .conflict-footer-actions {
+    grid-template-columns: 1fr;
   }
 
   .conflict-hunk-header {
@@ -730,11 +868,8 @@ textarea {
     border-radius: 8px;
   }
 
-  .diff-body {
-    max-height: 220px;
-  }
-
-  .conflict-modal textarea {
-    min-height: 120px;
+  .conflict-preview-body {
+    min-height: 300px;
+    max-height: 500px;
   }
 }
