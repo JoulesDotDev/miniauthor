@@ -16,6 +16,31 @@ interface SyncPanelProps {
   onExportSplitPages: () => void;
 }
 
+function getShortcuts(isMac: boolean): Array<{ key: string; action: string }> {
+  const mod = isMac ? "⌘" : "Ctrl";
+
+  return [
+    { key: `${mod} S`, action: "Sync now" },
+    { key: `${mod} B`, action: "Bold" },
+    { key: `${mod} I`, action: "Italic" },
+    { key: `${mod} 1`, action: "Heading 1" },
+    { key: `${mod} 2`, action: "Heading 2" },
+    { key: `${mod} 3`, action: "Paragraph" },
+  ];
+}
+
+function renderShortcutKey(key: string, isMac: boolean) {
+  return key.split(" ").map((token, index) => {
+    const isMacModifier = isMac && (token === "⌘" || token === "⇧" || token === "⌥");
+
+    return (
+      <span key={`${token}-${index}`} className={isMacModifier ? "shortcut-modifier" : undefined}>
+        {token}
+      </span>
+    );
+  });
+}
+
 export function SyncPanel({
   syncNotice,
   isConnected,
@@ -30,13 +55,14 @@ export function SyncPanel({
   onExportMarkdown,
   onExportSplitPages,
 }: SyncPanelProps) {
-  const { showChrome } = useEditorChrome();
+  const { showChrome, isMac } = useEditorChrome();
+  const shortcuts = getShortcuts(isMac);
 
   return (
     <aside className={`settings-panel panel-right ${showChrome ? "open" : ""}`}>
       <h2>Sync</h2>
       <p>{syncNotice}</p>
-      <div className="button-row">
+      <div className="button-row sync-actions">
         {isConnected ? (
           <button type="button" onClick={onDisconnect}>
             <Unlink2 size={15} />
@@ -53,8 +79,7 @@ export function SyncPanel({
           <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
         </button>
       </div>
-      <div className="panel-divider" aria-hidden="true" />
-      <div className="button-row">
+      <div className="button-row export-actions">
         <button type="button" onClick={onExportMarkdown}>
           <FileDown size={15} />
           <span>Export Manuscript</span>
@@ -66,7 +91,19 @@ export function SyncPanel({
           <span>Export split pages</span>
         </button>
       </div>
-      <div className="meta-box mobile-meta-box">
+      <div className="shortcuts-section">
+        <h2>Shortcuts</h2>
+        <p>Writing-first controls.</p>
+        <div className="shortcut-list" aria-label="Keyboard shortcuts">
+          {shortcuts.map((item) => (
+            <div key={item.key} className="shortcut-row">
+              <kbd>{renderShortcutKey(item.key, isMac)}</kbd>
+              <span>{item.action}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="meta-box status-meta-box">
         <div>Updated: {updatedAtText}</div>
         <div>Synced: {lastSyncedAtText}</div>
         <div className={`status-row ${isOnline ? "online" : "offline"}`}>

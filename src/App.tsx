@@ -4,7 +4,6 @@ import { ConflictModal } from "@/components/editor/ConflictModal";
 import { EditorCanvas } from "@/components/editor/EditorCanvas";
 import { SelectionToolbar } from "@/components/editor/SelectionToolbar";
 import { SyncPanel } from "@/components/editor/SyncPanel";
-import { WritingPanel } from "@/components/editor/WritingPanel";
 import { EditorChromeProvider } from "@/contexts/EditorChromeContext";
 import { useDropboxSync } from "@/hooks/useDropboxSync";
 import { useManuscriptEditor } from "@/hooks/useManuscriptEditor";
@@ -158,12 +157,6 @@ export function App() {
   return (
     <EditorChromeProvider showChrome={showChrome} toggleChrome={toggleChrome} isMac={isMac}>
       <div className={`app-shell ${showChrome ? "chrome-visible" : ""}`}>
-        <WritingPanel
-          updatedAtText={formatTime(updatedAt)}
-          lastSyncedAtText={formatTime(lastSyncedAt)}
-          isOnline={isOnline}
-        />
-
         <SelectionToolbar
           visible={showSelectionToolbar}
           onBold={() => applyInlineFormat("bold")}

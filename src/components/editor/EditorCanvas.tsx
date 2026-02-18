@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, type LexicalEditor } from "lexical";
 import { HeadingNode, $isHeadingNode } from "@lexical/rich-text";
@@ -336,6 +336,14 @@ function EditorCanvasComponent({
 }: EditorCanvasProps) {
   const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
+  const [isDesktopPointer, setIsDesktopPointer] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  });
+  const [showFloatingToggle, setShowFloatingToggle] = useState<boolean>(true);
 
   const initialConfig = useMemo(
     () => ({
@@ -366,10 +374,67 @@ function EditorCanvasComponent({
     [],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const apply = () => {
+      setIsDesktopPointer(mediaQuery.matches);
+      setShowFloatingToggle(true);
+    };
+
+    apply();
+
+    mediaQuery.addEventListener("change", apply);
+    return () => {
+      mediaQuery.removeEventListener("change", apply);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktopPointer) {
+      setShowFloatingToggle(true);
+      return;
+    }
+
+    if (showChrome) {
+      setShowFloatingToggle(true);
+      return;
+    }
+
+    let timeoutId: number | null = null;
+
+    const resetFadeTimer = () => {
+      setShowFloatingToggle(true);
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      timeoutId = window.setTimeout(() => {
+        setShowFloatingToggle(false);
+      }, 2000);
+    };
+
+    resetFadeTimer();
+
+    window.addEventListener("mousemove", resetFadeTimer, { passive: true });
+
+    return () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      window.removeEventListener("mousemove", resetFadeTimer);
+    };
+  }, [isDesktopPointer, showChrome]);
+
   return (
     <main className="editor-shell">
       <button
-        className="floating-toggle"
+        className={`floating-toggle ${isDesktopPointer && !showFloatingToggle ? "inactive" : ""}`}
         type="button"
         onClick={toggleChrome}
         aria-label={showChrome ? "Close menu" : "Open menu"}

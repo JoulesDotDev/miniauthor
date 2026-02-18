@@ -10,8 +10,8 @@
 @import "@fontsource/libre-baskerville/700-italic.css";
 
 :root {
-  --bg: #f4f4ee;
-  --paper: #fffdf8;
+  --bg: #ffffff;
+  --paper: #ffffff;
   --ink: #23201c;
   --ink-muted: #6a6359;
   --line: #d8d1c8;
@@ -36,10 +36,7 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 20% -10%, rgba(54, 95, 115, 0.12), transparent 28%),
-    radial-gradient(circle at 85% 0%, rgba(92, 121, 96, 0.08), transparent 34%),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--ui-font);
 }
@@ -61,28 +58,44 @@ textarea {
 }
 
 .chrome-visible .editor-shell {
-  padding-left: 290px;
+  padding-left: 20px;
   padding-right: 290px;
 }
 
 .floating-toggle {
   position: fixed;
-  top: 14px;
+  bottom: 14px;
   right: 14px;
   z-index: 40;
+  width: 46px;
+  height: 46px;
+  padding: 0;
   border: 1px solid var(--panel-border);
   background: rgba(255, 253, 248, 0.88);
   color: var(--ink);
   border-radius: 999px;
-  padding: 8px 12px;
+  display: grid;
+  place-items: center;
   font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   backdrop-filter: blur(8px);
+  transition: opacity 0.22s ease;
+}
+
+.floating-toggle.inactive {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .floating-toggle-icon {
   display: none;
+}
+
+.floating-toggle-label {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .paper-column {
@@ -90,9 +103,9 @@ textarea {
   min-height: calc(100vh - 64px);
   margin: 0 auto;
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--soft-shadow);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   padding: 66px clamp(20px, 6vw, 72px) 120px;
 }
 
@@ -176,8 +189,10 @@ textarea {
   bottom: 0;
   width: 270px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 18px 16px 24px;
-  background: rgba(249, 247, 242, 0.96);
+  background: var(--panel);
   border-color: var(--panel-border);
   backdrop-filter: blur(6px);
   z-index: 36;
@@ -283,10 +298,8 @@ textarea {
   cursor: not-allowed;
 }
 
-.panel-divider {
-  height: 1px;
-  margin: 12px 0;
-  background: var(--panel-border);
+.export-actions {
+  margin-top: 12px;
 }
 
 .button-icon-spin {
@@ -319,6 +332,10 @@ textarea {
   color: var(--danger);
 }
 
+.status-meta-box {
+  margin-top: 14px;
+}
+
 .status-row {
   display: inline-flex;
   align-items: center;
@@ -336,8 +353,8 @@ textarea {
   background: #2f8f4e;
 }
 
-.mobile-meta-box {
-  display: none;
+.shortcuts-section {
+  margin-top: 14px;
 }
 
 .selection-toolbar {
@@ -510,14 +527,6 @@ textarea {
     right: 14px;
     bottom: 14px;
     z-index: 48;
-    width: 46px;
-    height: 46px;
-    padding: 0;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    text-transform: none;
-    letter-spacing: 0;
   }
 
   .floating-toggle-label {
@@ -544,8 +553,8 @@ textarea {
     transform: translateX(100%);
   }
 
-  .mobile-meta-box {
-    display: block;
+  .shortcuts-section {
+    display: none;
   }
 
   .paper-column {
