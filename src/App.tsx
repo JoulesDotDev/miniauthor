@@ -8,7 +8,6 @@ import { EditorChromeProvider } from "@/contexts/EditorChromeContext";
 import { useDropboxSync } from "@/hooks/useDropboxSync";
 import { useManuscriptEditor } from "@/hooks/useManuscriptEditor";
 import type { Block } from "@/lib/editor-types";
-import { buildSideBySideDiffRows } from "@/lib/merge";
 import { createBlock, splitBlocksToMarkdownPages } from "@/lib/markdown";
 
 const THEME_STORAGE_KEY = "book-writer-theme";
@@ -121,14 +120,6 @@ export function App() {
     dropboxAppKey,
     dropboxRedirectUri,
   });
-
-  const diffRows = useMemo(() => {
-    if (!conflict) {
-      return [];
-    }
-
-    return buildSideBySideDiffRows(conflict.local, conflict.remote);
-  }, [conflict]);
 
   useEffect(() => {
     const refreshOnlineState = () => {
@@ -267,19 +258,9 @@ export function App() {
 
         <ConflictModal
           conflict={conflict}
-          diffRows={diffRows}
           isSyncing={isSyncing}
           onChangeResolved={(text) => {
             setConflict((current) => (current ? { ...current, resolved: text } : current));
-          }}
-          onUseLocal={() => {
-            setConflict((current) => (current ? { ...current, resolved: current.local } : current));
-          }}
-          onUseDropbox={() => {
-            setConflict((current) => (current ? { ...current, resolved: current.remote } : current));
-          }}
-          onUseBase={() => {
-            setConflict((current) => (current ? { ...current, resolved: current.base } : current));
           }}
           onSaveResolution={() => {
             void resolveConflict();

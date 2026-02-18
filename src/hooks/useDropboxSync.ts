@@ -13,6 +13,7 @@ import {
 import { threeWayMergeText } from "@/lib/merge";
 import {
   createBlock,
+  hasMeaningfulBlocksContent,
   normalizeBlocksForEditor,
   parseMarkdownToBlocks,
   serializeBlocksToMarkdown,
@@ -108,32 +109,35 @@ export function useDropboxSync({
       const localMarkdown = serializeBlocksToMarkdown(blocks);
       const remoteFile = await dropboxDownloadFile(validToken.accessToken, DROPBOX_PATH);
       const remoteMarkdown = remoteFile?.content ?? "";
+      const localHasContent = hasMeaningfulBlocksContent(blocks);
+      const remoteBlocks = parseMarkdownToBlocks(remoteMarkdown);
+      const remoteHasContent = hasMeaningfulBlocksContent(remoteBlocks);
+      const mergeLocalMarkdown = localHasContent ? localMarkdown : "";
+      const mergeRemoteMarkdown = remoteHasContent ? remoteMarkdown : "";
       const isFirstSync =
         lastSyncedAt === null &&
         remoteRev === null &&
         baseMarkdown.trim().length === 0;
-      const hasLocalDraft = localMarkdown.trim().length > 0;
-      const hasRemoteDraft = remoteMarkdown.trim().length > 0;
 
       if (
         isFirstSync &&
         remoteFile &&
-        hasLocalDraft &&
-        hasRemoteDraft &&
-        localMarkdown !== remoteMarkdown
+        localHasContent &&
+        remoteHasContent &&
+        mergeLocalMarkdown !== mergeRemoteMarkdown
       ) {
         setConflict({
           base: "",
-          local: localMarkdown,
-          remote: remoteMarkdown,
-          resolved: localMarkdown,
+          local: mergeLocalMarkdown,
+          remote: mergeRemoteMarkdown,
+          resolved: mergeLocalMarkdown,
           reason: "First sync found both local and Dropbox drafts. Choose one or merge manually.",
         });
         setSyncNotice("First sync conflict: local and Dropbox both contain writing.");
         return false;
       }
 
-      const mergeResult = threeWayMergeText(baseMarkdown, localMarkdown, remoteMarkdown);
+      const mergeResult = threeWayMergeText(baseMarkdown, mergeLocalMarkdown, mergeRemoteMarkdown);
 
       if (mergeResult.status === "conflict") {
         setConflict({
@@ -150,7 +154,7 @@ export function useDropboxSync({
       const mergedMarkdown = mergeResult.merged;
       let latestRev = remoteFile?.rev ?? remoteRev;
 
-      if (!remoteFile || mergedMarkdown !== remoteMarkdown) {
+      if (!remoteFile || mergedMarkdown !== mergeRemoteMarkdown) {
         const uploaded = await dropboxUploadFile(validToken.accessToken, DROPBOX_PATH, mergedMarkdown);
         latestRev = uploaded.rev;
       }

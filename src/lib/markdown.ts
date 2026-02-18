@@ -16,6 +16,14 @@ export function createBlock(type: BlockType, text = ""): Block {
   };
 }
 
+function plainTextFromBlockHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -175,6 +183,24 @@ export function normalizeBlocksForEditor(blocks: Block[]): Block[] {
   }
 
   return sanitized;
+}
+
+export function hasMeaningfulBlocksContent(blocks: Block[]): boolean {
+  const normalized = normalizeBlocksForEditor(blocks);
+
+  return normalized.some((block, index) => {
+    const text = plainTextFromBlockHtml(block.text);
+
+    if (!text) {
+      return false;
+    }
+
+    if (index === 0 && block.type === "title") {
+      return true;
+    }
+
+    return block.type === "heading1" || block.type === "heading2" || block.type === "paragraph";
+  });
 }
 
 function serializeBlocks(blocks: Block[], ensureSingleTitle: boolean): string {

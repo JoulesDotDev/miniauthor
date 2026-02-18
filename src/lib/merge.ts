@@ -26,6 +26,17 @@ export interface DiffRow {
   remoteStatus: "equal" | "added" | "empty";
 }
 
+export interface DiffHunk {
+  id: string;
+  type: "equal" | "change";
+  incomingStart: number | null;
+  localStart: number | null;
+  incomingLines: string[];
+  localLines: string[];
+}
+
+export type DiffChoice = "incoming" | "local";
+
 function splitLines(text: string): string[] {
   if (!text) {
     return [];
@@ -371,4 +382,93 @@ export function buildSideBySideDiffRows(localText: string, remoteText: string): 
   }
 
   return rows;
+}
+
+export function buildDiffHunks(incomingText: string, localText: string): DiffHunk[] {
+  const incomingLines = splitLines(incomingText);
+  const localLines = splitLines(localText);
+  const ops = diffTokens(incomingLines, localLines);
+
+  const hunks: DiffHunk[] = [];
+  let incomingLineNumber = 1;
+  let localLineNumber = 1;
+
+  for (let index = 0; index < ops.length; index += 1) {
+    const op = ops[index];
+
+    if (op.type === "equal") {
+      hunks.push({
+        id: `equal-${hunks.length}`,
+        type: "equal",
+        incomingStart: incomingLineNumber,
+        localStart: localLineNumber,
+        incomingLines: [...op.items],
+        localLines: [...op.items],
+      });
+      incomingLineNumber += op.items.length;
+      localLineNumber += op.items.length;
+      continue;
+    }
+
+    if (op.type === "delete") {
+      const next = ops[index + 1];
+
+      if (next && next.type === "insert") {
+        hunks.push({
+          id: `change-${hunks.length}`,
+          type: "change",
+          incomingStart: incomingLineNumber,
+          localStart: localLineNumber,
+          incomingLines: [...op.items],
+          localLines: [...next.items],
+        });
+        incomingLineNumber += op.items.length;
+        localLineNumber += next.items.length;
+        index += 1;
+        continue;
+      }
+
+      hunks.push({
+        id: `change-${hunks.length}`,
+        type: "change",
+        incomingStart: incomingLineNumber,
+        localStart: null,
+        incomingLines: [...op.items],
+        localLines: [],
+      });
+      incomingLineNumber += op.items.length;
+      continue;
+    }
+
+    hunks.push({
+      id: `change-${hunks.length}`,
+      type: "change",
+      incomingStart: null,
+      localStart: localLineNumber,
+      incomingLines: [],
+      localLines: [...op.items],
+    });
+    localLineNumber += op.items.length;
+  }
+
+  return hunks;
+}
+
+export function composeResolvedFromHunks(
+  hunks: DiffHunk[],
+  choices: Record<string, DiffChoice>,
+): string {
+  const mergedLines: string[] = [];
+
+  for (const hunk of hunks) {
+    if (hunk.type === "equal") {
+      mergedLines.push(...hunk.localLines);
+      continue;
+    }
+
+    const selected = choices[hunk.id] ?? "local";
+    mergedLines.push(...(selected === "incoming" ? hunk.incomingLines : hunk.localLines));
+  }
+
+  return joinLines(mergedLines);
 }
