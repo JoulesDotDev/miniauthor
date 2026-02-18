@@ -232,10 +232,6 @@ textarea {
   transition: padding 0.24s ease;
 }
 
-.chrome-visible .editor-shell {
-  padding-right: 380px;
-}
-
 .floating-toggle {
   position: fixed;
   right: 22px;
@@ -494,7 +490,7 @@ textarea {
   width: 100%;
   min-height: 30px;
   display: grid;
-  grid-template-columns: 12px 18px 1fr;
+  grid-template-columns: 12px 20px 1fr;
   align-items: center;
   gap: 6px;
   border: 0;
@@ -540,7 +536,7 @@ textarea {
 }
 
 .map-tree-item.level-title {
-  grid-template-columns: 12px 18px 1fr;
+  grid-template-columns: 12px 20px 1fr;
 }
 
 .map-tree-item.level-heading1 {
@@ -589,6 +585,29 @@ textarea {
 
 .button-row button svg {
   flex-shrink: 0;
+}
+
+.button-row button.button-with-subtitle {
+  min-height: 56px;
+  height: auto;
+  align-items: center;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.button-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  text-align: left;
+  line-height: 1.2;
+}
+
+.button-subtitle {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .button-icon-spin {
@@ -1080,10 +1099,6 @@ textarea {
 }
 
 @media (max-width: 1120px) {
-  .chrome-visible .editor-shell {
-    padding-right: 28px;
-  }
-
   .settings-panel {
     width: min(92vw, 360px);
   }

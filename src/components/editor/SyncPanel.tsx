@@ -95,13 +95,19 @@ export function SyncPanel({
       </div>
       <h2 className="panel-section-title">Export</h2>
       <div className="button-row export-actions">
-        <button type="button" onClick={onExportMarkdown}>
+        <button type="button" onClick={onExportMarkdown} className="button-with-subtitle">
           <FileDown size={15} />
-          <span>Export Manuscript</span>
+          <span className="button-copy">
+            <span>Export Manuscript</span>
+            <span className="button-subtitle">Single .md file with your full draft.</span>
+          </span>
         </button>
-        <button type="button" onClick={onExportSplitPages}>
+        <button type="button" onClick={onExportSplitPages} className="button-with-subtitle">
           <Files size={15} />
-          <span>Export split pages</span>
+          <span className="button-copy">
+            <span>Export Split Pages</span>
+            <span className="button-subtitle">One .md file per Heading 1 section.</span>
+          </span>
         </button>
       </div>
       <h2 className="panel-section-title">Settings</h2>

@@ -38,9 +38,9 @@ export function MapPanel({
           >
             <span className="map-tree-branch" aria-hidden="true" />
             <span className="map-tree-icon" aria-hidden="true">
-              {item.type === "title" ? <FileText size={16} /> : null}
-              {item.type === "heading1" ? <Heading1 size={16} /> : null}
-              {item.type === "heading2" ? <Heading2 size={16} /> : null}
+              {item.type === "title" ? <FileText size={18} /> : null}
+              {item.type === "heading1" ? <Heading1 size={18} /> : null}
+              {item.type === "heading2" ? <Heading2 size={18} /> : null}
             </span>
             <span className="map-tree-name">{item.label}</span>
           </button>

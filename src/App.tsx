@@ -163,12 +163,7 @@ export function App() {
         )
         .map(({ block, index }) => {
           const plainText = stripHtmlText(block.text);
-          const fallback =
-            block.type === "title"
-              ? "Title"
-              : block.type === "heading1"
-                ? "Heading 1"
-                : "Heading 2";
+          const fallback = "Untitled";
 
           return {
             id: block.id,
@@ -341,7 +336,7 @@ export function App() {
       isMobileOS={isMobileOS}
     >
       <div
-        className={`app-shell ${showChrome ? "chrome-visible" : ""} ${isConflictOpen ? "conflict-open" : ""}`}
+        className={`app-shell ${isConflictOpen ? "conflict-open" : ""}`}
         onPointerDownCapture={(event) => {
           const target = event.target as HTMLElement;
 
