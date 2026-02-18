@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 
 import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, UNDO_COMMAND, type ElementNode as LexicalElementNode, type LexicalEditor, type LexicalNode } from "lexical";
 import { HeadingNode, $isHeadingNode } from "@lexical/rich-text";
@@ -16,7 +17,6 @@ import {
   ensureLexicalManuscriptStructure,
   isLexicalElementEmpty,
   lexicalManuscriptNeedsFix,
-  markdownFromBlocksForCompare,
   readBlocksFromLexicalRoot,
   restoreTitleBlockFromHtml,
   selectCurrentTopLevelBlockContent,
@@ -69,6 +69,31 @@ function placeholderForType(type: Block["type"]): string {
   }
 
   return "Start writting...";
+}
+
+function areBlocksEqual(left: Block[], right: Block[]): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftBlock = left[index];
+    const rightBlock = right[index];
+
+    if (
+      leftBlock.id !== rightBlock.id ||
+      leftBlock.type !== rightBlock.type ||
+      leftBlock.text !== rightBlock.text
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function keepCaretComfortablyVisible(editor: LexicalEditor): void {
@@ -203,6 +228,34 @@ function hasMeaningfulInlineHtml(html: string): boolean {
     .length > 0;
 }
 
+function applyBlockDecoration(
+  element: HTMLElement,
+  blockId: string,
+  type: Block["type"],
+  isEmpty: boolean,
+  showPlaceholder: boolean,
+): void {
+  element.dataset.blockId = blockId;
+
+  if (isEmpty) {
+    element.dataset.empty = "true";
+  } else {
+    delete element.dataset.empty;
+  }
+
+  if (showPlaceholder) {
+    element.dataset.placeholder = placeholderForType(type);
+  } else {
+    delete element.dataset.placeholder;
+  }
+
+  if (type === "heading1") {
+    element.dataset.pageStart = "true";
+  } else {
+    delete element.dataset.pageStart;
+  }
+}
+
 function decorateEditorBlocks(editor: LexicalEditor): void {
   editor.getEditorState().read(() => {
     const root = $getRoot();
@@ -234,26 +287,70 @@ function decorateEditorBlocks(editor: LexicalEditor): void {
         type === "heading2" ||
         (type === "paragraph" && hasSingleStarterParagraph && index === 1);
 
-      element.dataset.blockId = node.getKey();
-
-      if (isEmpty) {
-        element.dataset.empty = "true";
-      } else {
-        delete element.dataset.empty;
-      }
-
-      if (showPlaceholder) {
-        element.dataset.placeholder = placeholderForType(type);
-      } else {
-        delete element.dataset.placeholder;
-      }
-
-      if (type === "heading1") {
-        element.dataset.pageStart = "true";
-      } else {
-        delete element.dataset.pageStart;
-      }
+      applyBlockDecoration(element, node.getKey(), type, isEmpty, showPlaceholder);
     });
+  });
+}
+
+function decorateActiveEditorBlock(editor: LexicalEditor): void {
+  editor.getEditorState().read(() => {
+    const root = $getRoot();
+    const selection = $getSelection();
+
+    if (!$isRangeSelection(selection)) {
+      return;
+    }
+
+    const activeTopLevel = selection.anchor.getNode().getTopLevelElement();
+
+    if (
+      !activeTopLevel ||
+      activeTopLevel.getParent() !== root ||
+      !$isElementNode(activeTopLevel)
+    ) {
+      return;
+    }
+
+    const first = root.getFirstChild();
+    if (!first || !$isElementNode(first)) {
+      return;
+    }
+
+    const second = first.getNextSibling();
+    const hasSingleStarterParagraph =
+      !!second &&
+      !second.getNextSibling() &&
+      $isParagraphNode(second) &&
+      isLexicalElementEmpty(second);
+    const isTitle = activeTopLevel.getKey() === first.getKey();
+    const type: Block["type"] = isTitle
+      ? "title"
+      : $isHeadingNode(activeTopLevel)
+        ? activeTopLevel.getTag() === "h3"
+          ? "heading2"
+          : "heading1"
+        : "paragraph";
+    const showPlaceholder =
+      type === "title" ||
+      type === "heading1" ||
+      type === "heading2" ||
+      (type === "paragraph" &&
+        hasSingleStarterParagraph &&
+        !!second &&
+        second.getKey() === activeTopLevel.getKey());
+    const element = editor.getElementByKey(activeTopLevel.getKey());
+
+    if (!element) {
+      return;
+    }
+
+    applyBlockDecoration(
+      element,
+      activeTopLevel.getKey(),
+      type,
+      isLexicalElementEmpty(activeTopLevel),
+      showPlaceholder,
+    );
   });
 }
 
@@ -267,33 +364,30 @@ function EditorReadyPlugin({ onEditorReady }: { onEditorReady: (editor: LexicalE
   return null;
 }
 
-function ExternalBlocksSyncPlugin({ blocks }: { blocks: Block[] }) {
+function ExternalBlocksSyncPlugin({
+  blocks,
+  editorBlocksRef,
+}: {
+  blocks: Block[];
+  editorBlocksRef: MutableRefObject<Block[]>;
+}) {
   const [editor] = useLexicalComposerContext();
-  const lastAppliedMarkdownRef = useRef<string>("");
 
   useEffect(() => {
-    const incomingMarkdown = markdownFromBlocksForCompare(blocks);
-
-    if (incomingMarkdown === lastAppliedMarkdownRef.current) {
+    // Most updates come from the editor itself. Skip expensive work for those.
+    if (areBlocksEqual(blocks, editorBlocksRef.current)) {
       return;
     }
 
-    let currentMarkdown = "";
-    editor.getEditorState().read(() => {
-      currentMarkdown = markdownFromBlocksForCompare(readBlocksFromLexicalRoot());
-    });
+    editor.update(
+      () => {
+        writeBlocksToLexicalRoot(blocks);
+      },
+      { tag: "external-sync" },
+    );
 
-    if (incomingMarkdown !== currentMarkdown) {
-      editor.update(
-        () => {
-          writeBlocksToLexicalRoot(blocks);
-        },
-        { tag: "external-sync" },
-      );
-    }
-
-    lastAppliedMarkdownRef.current = incomingMarkdown;
-  }, [blocks, editor]);
+    editorBlocksRef.current = blocks;
+  }, [blocks, editor, editorBlocksRef]);
 
   return null;
 }
@@ -318,15 +412,32 @@ function ManuscriptBehaviorPlugin({
   useEffect(() => {
     let frameId: number | null = null;
     let scrollFrameId: number | null = null;
+    let pendingDecoration: "none" | "active" | "full" = "none";
 
-    const scheduleDecoration = () => {
+    const scheduleDecoration = (mode: "active" | "full") => {
+      if (mode === "full") {
+        pendingDecoration = "full";
+      } else if (pendingDecoration === "none") {
+        pendingDecoration = "active";
+      }
+
       if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
+        return;
       }
 
       frameId = window.requestAnimationFrame(() => {
         frameId = null;
-        decorateEditorBlocks(editor);
+        const nextMode = pendingDecoration;
+        pendingDecoration = "none";
+
+        if (nextMode === "full") {
+          decorateEditorBlocks(editor);
+          return;
+        }
+
+        if (nextMode === "active") {
+          decorateActiveEditorBlock(editor);
+        }
       });
     };
 
@@ -475,7 +586,8 @@ function ManuscriptBehaviorPlugin({
       let hasSelectionText = false;
       let selectionIncludesTitle = false;
       let nextSelectionToolbarActiveState = EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
-      const hasDocumentMutation = dirtyElements.size > 0 || dirtyLeaves.size > 0;
+      const hasStructureMutation = dirtyElements.size > 0;
+      const hasDocumentMutation = hasStructureMutation || dirtyLeaves.size > 0;
       let nextBlocks: Block[] = [];
       let activeBlockKey: string | null = null;
 
@@ -514,12 +626,18 @@ function ManuscriptBehaviorPlugin({
           : EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE,
       );
 
+      const activeBlockChanged = lastActiveBlockKeyRef.current !== activeBlockKey;
+
       if (lastActiveBlockKeyRef.current !== activeBlockKey) {
         lastActiveBlockKeyRef.current = activeBlockKey;
         onActiveBlockChange(activeBlockKey);
       }
 
-      scheduleDecoration();
+      if (hasStructureMutation) {
+        scheduleDecoration("full");
+      } else if (hasDocumentMutation || activeBlockChanged) {
+        scheduleDecoration("active");
+      }
 
       if (needsFix) {
         editor.update(
@@ -547,7 +665,7 @@ function ManuscriptBehaviorPlugin({
       }
     });
 
-    scheduleDecoration();
+    scheduleDecoration("full");
 
     return () => {
       unregisterEnter();
@@ -579,6 +697,7 @@ function EditorCanvasComponent({
 }: EditorCanvasProps) {
   const { showChrome, menuLabel, toggleChrome, isMobileOS } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
+  const lastEditorBlocksRef = useRef<Block[]>(blocks);
   const [isDesktopPointer, setIsDesktopPointer] = useState<boolean>(() => {
     if (typeof window === "undefined") {
       return false;
@@ -616,6 +735,11 @@ function EditorCanvasComponent({
     }),
     [],
   );
+
+  const handleBlocksChange = useCallback((nextBlocks: Block[]) => {
+    lastEditorBlocksRef.current = nextBlocks;
+    onBlocksChange(nextBlocks);
+  }, [onBlocksChange]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -713,9 +837,9 @@ function EditorCanvasComponent({
 
       <LexicalComposer initialConfig={initialConfig}>
         <EditorReadyPlugin onEditorReady={onEditorReady} />
-        <ExternalBlocksSyncPlugin blocks={blocks} />
+        <ExternalBlocksSyncPlugin blocks={blocks} editorBlocksRef={lastEditorBlocksRef} />
         <ManuscriptBehaviorPlugin
-          onBlocksChange={onBlocksChange}
+          onBlocksChange={handleBlocksChange}
           onSelectionToolbarChange={onSelectionToolbarChange}
           onSelectionToolbarActiveChange={onSelectionToolbarActiveChange}
           onActiveBlockChange={onActiveBlockChange}

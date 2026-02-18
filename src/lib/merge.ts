@@ -113,9 +113,83 @@ function areEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
+const MAX_LCS_MATRIX_CELLS = 2_000_000;
+
+function compactOps(ops: DiffOp[]): DiffOp[] {
+  const compacted: DiffOp[] = [];
+
+  for (const op of ops) {
+    if (op.items.length === 0) {
+      continue;
+    }
+
+    const previous = compacted[compacted.length - 1];
+
+    if (previous && previous.type === op.type) {
+      previous.items.push(...op.items);
+    } else {
+      compacted.push({ type: op.type, items: [...op.items] });
+    }
+  }
+
+  return compacted;
+}
+
+function buildFallbackDiffOps(
+  prefix: string[],
+  sourceMiddle: string[],
+  targetMiddle: string[],
+  suffix: string[],
+): DiffOp[] {
+  return compactOps([
+    { type: "equal", items: prefix },
+    { type: "delete", items: sourceMiddle },
+    { type: "insert", items: targetMiddle },
+    { type: "equal", items: suffix },
+  ]);
+}
+
 function diffTokens(source: string[], target: string[]): DiffOp[] {
-  const rows = source.length;
-  const cols = target.length;
+  const sourceLength = source.length;
+  const targetLength = target.length;
+  let commonPrefixLength = 0;
+
+  while (
+    commonPrefixLength < sourceLength &&
+    commonPrefixLength < targetLength &&
+    source[commonPrefixLength] === target[commonPrefixLength]
+  ) {
+    commonPrefixLength += 1;
+  }
+
+  let commonSuffixLength = 0;
+  while (
+    commonSuffixLength < sourceLength - commonPrefixLength &&
+    commonSuffixLength < targetLength - commonPrefixLength &&
+    source[sourceLength - 1 - commonSuffixLength] === target[targetLength - 1 - commonSuffixLength]
+  ) {
+    commonSuffixLength += 1;
+  }
+
+  const prefix = commonPrefixLength > 0 ? source.slice(0, commonPrefixLength) : [];
+  const suffix =
+    commonSuffixLength > 0 ? source.slice(sourceLength - commonSuffixLength) : [];
+  const sourceMiddle = source.slice(commonPrefixLength, sourceLength - commonSuffixLength);
+  const targetMiddle = target.slice(commonPrefixLength, targetLength - commonSuffixLength);
+
+  const rows = sourceMiddle.length;
+  const cols = targetMiddle.length;
+
+  if (rows === 0 && cols === 0) {
+    return compactOps([
+      { type: "equal", items: prefix },
+      { type: "equal", items: suffix },
+    ]);
+  }
+
+  if (rows * cols > MAX_LCS_MATRIX_CELLS) {
+    return buildFallbackDiffOps(prefix, sourceMiddle, targetMiddle, suffix);
+  }
 
   const lcs: number[][] = Array.from({ length: rows + 1 }, () =>
     Array<number>(cols + 1).fill(0),
@@ -123,7 +197,7 @@ function diffTokens(source: string[], target: string[]): DiffOp[] {
 
   for (let i = 1; i <= rows; i += 1) {
     for (let j = 1; j <= cols; j += 1) {
-      if (source[i - 1] === target[j - 1]) {
+      if (sourceMiddle[i - 1] === targetMiddle[j - 1]) {
         lcs[i][j] = lcs[i - 1][j - 1] + 1;
       } else {
         lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);
@@ -136,38 +210,30 @@ function diffTokens(source: string[], target: string[]): DiffOp[] {
   let j = cols;
 
   while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && source[i - 1] === target[j - 1]) {
-      reversedOps.push({ type: "equal", items: [source[i - 1]] });
+    if (i > 0 && j > 0 && sourceMiddle[i - 1] === targetMiddle[j - 1]) {
+      reversedOps.push({ type: "equal", items: [sourceMiddle[i - 1]] });
       i -= 1;
       j -= 1;
       continue;
     }
 
     if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
-      reversedOps.push({ type: "insert", items: [target[j - 1]] });
+      reversedOps.push({ type: "insert", items: [targetMiddle[j - 1]] });
       j -= 1;
       continue;
     }
 
-    reversedOps.push({ type: "delete", items: [source[i - 1]] });
+    reversedOps.push({ type: "delete", items: [sourceMiddle[i - 1]] });
     i -= 1;
   }
 
   reversedOps.reverse();
-
-  const compacted: DiffOp[] = [];
-
-  for (const op of reversedOps) {
-    const previous = compacted[compacted.length - 1];
-
-    if (previous && previous.type === op.type) {
-      previous.items.push(...op.items);
-    } else {
-      compacted.push({ type: op.type, items: [...op.items] });
-    }
-  }
-
-  return compacted;
+  const middleOps = compactOps(reversedOps);
+  return compactOps([
+    { type: "equal", items: prefix },
+    ...middleOps,
+    { type: "equal", items: suffix },
+  ]);
 }
 
 function changesFromDiff(ops: DiffOp[]): Change[] {

@@ -10,7 +10,7 @@ import { EditorChromeProvider } from "@/contexts/EditorChromeContext";
 import { useDropboxSync } from "@/hooks/useDropboxSync";
 import { useManuscriptEditor } from "@/hooks/useManuscriptEditor";
 import type { Block } from "@/lib/editor-types";
-import { createBlock, splitBlocksToMarkdownPages } from "@/lib/markdown";
+import { createBlock, serializeBlocksToMarkdown, splitBlocksToMarkdownPages } from "@/lib/markdown";
 
 const THEME_STORAGE_KEY = "book-writer-theme";
 const APP_NAME = "Mini Author .app";
@@ -87,21 +87,28 @@ function stripHtmlText(value: string): string {
     return "";
   }
 
-  if (typeof document === "undefined") {
-    return value
-      .replace(/<br\s*\/?>/gi, " ")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
+  const normalizeWhitespace = (input: string) =>
+    input
+      .replace(/\u00a0/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+
+  if (!value.includes("<")) {
+    return normalizeWhitespace(value);
+  }
+
+  if (typeof document === "undefined") {
+    return normalizeWhitespace(
+      value
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/g, " "),
+    );
   }
 
   const parser = document.createElement("div");
   parser.innerHTML = value;
-  return (parser.textContent ?? "")
-    .replace(/\u00a0/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeWhitespace(parser.textContent ?? "");
 }
 
 type OutlineEntry = OutlineItem & { index: number };
@@ -145,7 +152,6 @@ export function App() {
     setUpdatedAt,
   });
   const {
-    markdownPreview,
     showSelectionToolbar,
     selectionToolbarActive,
     setLexicalEditor,
@@ -454,7 +460,7 @@ export function App() {
             void syncWithDropbox();
           }}
           onExportMarkdown={() => {
-            downloadTextFile("manuscript.md", markdownPreview);
+            downloadTextFile("manuscript.md", serializeBlocksToMarkdown(blocks));
           }}
           onExportSplitPages={() => {
             const pages = splitBlocksToMarkdownPages(blocks);

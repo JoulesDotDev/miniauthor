@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import { FORMAT_TEXT_COMMAND, type LexicalEditor } from "lexical";
 
 import type { Block } from "@/lib/editor-types";
 import {
-  markdownFromBlocksForCompare,
   selectCurrentTopLevelBlockContent,
   selectTopLevelBlockStartByKey,
   selectionTouchesTitleBlock,
   setSelectedTopLevelBlocksToType,
 } from "@/lib/lexical-manuscript";
-import { serializeBlocksToMarkdown } from "@/lib/markdown";
 
 interface UseManuscriptEditorArgs {
   blocks: Block[];
@@ -36,9 +34,6 @@ const EMPTY_TOOLBAR_ACTIVE_STATE: SelectionToolbarActiveState = {
 };
 
 interface UseManuscriptEditorResult {
-  currentPage: number;
-  totalPages: number;
-  markdownPreview: string;
   showSelectionToolbar: boolean;
   selectionToolbarActive: SelectionToolbarActiveState;
   setLexicalEditor: (editor: LexicalEditor | null) => void;
@@ -56,21 +51,13 @@ export function useManuscriptEditor({
   setBlocks,
   setUpdatedAt,
 }: UseManuscriptEditorArgs): UseManuscriptEditorResult {
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [showSelectionToolbar, setShowSelectionToolbar] = useState<boolean>(false);
   const [selectionToolbarActive, setSelectionToolbarActive] = useState<SelectionToolbarActiveState>(
     EMPTY_TOOLBAR_ACTIVE_STATE,
   );
 
   const editorRef = useRef<LexicalEditor | null>(null);
-  const markdownRef = useRef<string>(markdownFromBlocksForCompare(blocks));
-
-  const headingCount = useMemo(
-    () => blocks.reduce((count, block) => (block.type === "heading1" ? count + 1 : count), 0),
-    [blocks],
-  );
-  const totalPages = useMemo(() => Math.max(1, headingCount + 1), [headingCount]);
-  const markdownPreview = useMemo(() => serializeBlocksToMarkdown(blocks), [blocks]);
+  const lastBlocksRef = useRef<Block[]>(blocks);
 
   const setDirty = useCallback(() => {
     setUpdatedAt(Date.now());
@@ -82,13 +69,35 @@ export function useManuscriptEditor({
 
   const handleEditorBlocksChange = useCallback(
     (nextBlocks: Block[]) => {
-      const nextMarkdown = markdownFromBlocksForCompare(nextBlocks);
+      const previousBlocks = lastBlocksRef.current;
 
-      if (nextMarkdown === markdownRef.current) {
+      if (previousBlocks === nextBlocks) {
         return;
       }
 
-      markdownRef.current = nextMarkdown;
+      if (previousBlocks.length === nextBlocks.length) {
+        let changed = false;
+
+        for (let index = 0; index < previousBlocks.length; index += 1) {
+          const previous = previousBlocks[index];
+          const next = nextBlocks[index];
+
+          if (
+            previous.id !== next.id ||
+            previous.type !== next.type ||
+            previous.text !== next.text
+          ) {
+            changed = true;
+            break;
+          }
+        }
+
+        if (!changed) {
+          return;
+        }
+      }
+
+      lastBlocksRef.current = nextBlocks;
       setBlocks(nextBlocks);
       setDirty();
     },
@@ -175,41 +184,10 @@ export function useManuscriptEditor({
   }, []);
 
   useEffect(() => {
-    markdownRef.current = markdownFromBlocksForCompare(blocks);
+    lastBlocksRef.current = blocks;
   }, [blocks]);
 
-  useEffect(() => {
-    const updatePageIndicator = () => {
-      const markers = Array.from(document.querySelectorAll<HTMLElement>('[data-page-start="true"]'));
-      const readingLine = window.scrollY + window.innerHeight * 0.35;
-      let page = 1;
-
-      for (const marker of markers) {
-        const absoluteTop = window.scrollY + marker.getBoundingClientRect().top;
-
-        if (absoluteTop < readingLine) {
-          page += 1;
-        }
-      }
-
-      setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-    };
-
-    updatePageIndicator();
-
-    window.addEventListener("scroll", updatePageIndicator, { passive: true });
-    window.addEventListener("resize", updatePageIndicator);
-
-    return () => {
-      window.removeEventListener("scroll", updatePageIndicator);
-      window.removeEventListener("resize", updatePageIndicator);
-    };
-  }, [totalPages, headingCount, blocks.length]);
-
   return {
-    currentPage,
-    totalPages,
-    markdownPreview,
     showSelectionToolbar,
     selectionToolbarActive,
     setLexicalEditor,
