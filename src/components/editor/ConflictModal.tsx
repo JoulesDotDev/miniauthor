@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import type { ConflictState } from "@/lib/app-types";
-import { buildDiffHunks, composeResolvedFromHunks, type DiffChoice } from "@/lib/merge";
+import {
+  buildDiffHunks,
+  composeResolvedFromHunks,
+  resolveLinesForChoice,
+  type DiffChoice,
+  type DiffHunk,
+} from "@/lib/merge";
 
 interface ConflictModalProps {
   conflict: ConflictState | null;
@@ -17,6 +23,48 @@ function makeChoiceMap(hunkIds: string[], choice: DiffChoice): Record<string, Di
     acc[id] = choice;
     return acc;
   }, {});
+}
+
+function getHunkRange(hunk: DiffHunk): { start: number; end: number } | null {
+  const incomingRange =
+    hunk.incomingStart !== null && hunk.incomingLines.length > 0
+      ? { start: hunk.incomingStart, end: hunk.incomingStart + hunk.incomingLines.length - 1 }
+      : null;
+  const localRange =
+    hunk.localStart !== null && hunk.localLines.length > 0
+      ? { start: hunk.localStart, end: hunk.localStart + hunk.localLines.length - 1 }
+      : null;
+
+  if (!incomingRange && !localRange) {
+    return null;
+  }
+
+  if (!incomingRange) {
+    return localRange;
+  }
+
+  if (!localRange) {
+    return incomingRange;
+  }
+
+  return {
+    start: Math.min(incomingRange.start, localRange.start),
+    end: Math.max(incomingRange.end, localRange.end),
+  };
+}
+
+function formatRangeLabel(hunk: DiffHunk): string {
+  const range = getHunkRange(hunk);
+
+  if (!range) {
+    return "Affected lines";
+  }
+
+  if (range.start === range.end) {
+    return `Line ${range.start}`;
+  }
+
+  return `Lines ${range.start}-${range.end}`;
 }
 
 export function ConflictModal({
@@ -35,23 +83,67 @@ export function ConflictModal({
     [hunks],
   );
   const [hunkChoices, setHunkChoices] = useState<Record<string, DiffChoice>>({});
+  const [expandedPreviews, setExpandedPreviews] = useState<Record<string, boolean>>({});
+  const [pendingPreviewFocusId, setPendingPreviewFocusId] = useState<string | null>(null);
   const [isSaveConfirming, setIsSaveConfirming] = useState<boolean>(false);
-  const allFromDropboxSelected = changeHunks.length > 0
-    && changeHunks.every((hunk) => hunkChoices[hunk.id] === "incoming");
-  const allLocalSelected = changeHunks.length > 0
-    && changeHunks.every((hunk) => hunkChoices[hunk.id] === "local");
+  const previewSectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const allFromDropboxSelected =
+    changeHunks.length > 0 &&
+    changeHunks.every((hunk) => hunkChoices[hunk.id] === "incoming");
+  const allLocalSelected =
+    changeHunks.length > 0 &&
+    changeHunks.every((hunk) => hunkChoices[hunk.id] === "local");
 
   useEffect(() => {
     if (!conflict) {
       setHunkChoices({});
+      setExpandedPreviews({});
+      setPendingPreviewFocusId(null);
       setIsSaveConfirming(false);
       return;
     }
 
     const defaultChoice: DiffChoice = "local";
     setHunkChoices(makeChoiceMap(changeHunks.map((hunk) => hunk.id), defaultChoice));
+    setExpandedPreviews({});
+    setPendingPreviewFocusId(null);
     setIsSaveConfirming(false);
   }, [conflict?.local, conflict?.remote, changeHunks]);
+
+  useEffect(() => {
+    if (!pendingPreviewFocusId || !expandedPreviews[pendingPreviewFocusId]) {
+      return;
+    }
+
+    const focusPreview = () => {
+      const previewElement = previewSectionRefs.current[pendingPreviewFocusId];
+
+      if (!previewElement) {
+        return false;
+      }
+
+      previewElement.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+
+      return true;
+    };
+
+    if (focusPreview()) {
+      setPendingPreviewFocusId(null);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      focusPreview();
+      setPendingPreviewFocusId(null);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [expandedPreviews, pendingPreviewFocusId]);
 
   const resolvedMarkdown = useMemo(
     () => composeResolvedFromHunks(hunks, hunkChoices),
@@ -119,6 +211,11 @@ export function ConflictModal({
             ) : (
               changeHunks.map((hunk, index) => {
                 const currentChoice = hunkChoices[hunk.id] ?? "local";
+                const bothActive =
+                  currentChoice === "both_incoming_first" || currentChoice === "both_local_first";
+                const isPreviewOpen = Boolean(expandedPreviews[hunk.id]);
+                const previewMarkdown = resolveLinesForChoice(hunk, currentChoice).join("\n");
+                const previewRangeLabel = formatRangeLabel(hunk);
 
                 return (
                   <section key={hunk.id} className="conflict-hunk">
@@ -157,6 +254,22 @@ export function ConflictModal({
                         >
                           Take Local
                         </button>
+                        <button
+                          type="button"
+                          className={bothActive ? "is-active" : undefined}
+                          onClick={() => {
+                            if (!bothActive) {
+                              setIsSaveConfirming(false);
+                            }
+
+                            setHunkChoices((current) => ({
+                              ...current,
+                              [hunk.id]: "both_incoming_first",
+                            }));
+                          }}
+                        >
+                          Take Both
+                        </button>
                       </div>
                     </div>
 
@@ -188,26 +301,54 @@ export function ConflictModal({
                           ))}
                         </div>
                       </div>
-
                     </div>
+
+                    <div className="conflict-hunk-preview-controls">
+                      <button
+                        type="button"
+                        className={isPreviewOpen ? "is-active" : undefined}
+                        onClick={() => {
+                          if (!isPreviewOpen) {
+                            setPendingPreviewFocusId(hunk.id);
+                          } else {
+                            setPendingPreviewFocusId(null);
+                          }
+
+                          setExpandedPreviews((current) => ({
+                            ...current,
+                            [hunk.id]: !isPreviewOpen,
+                          }));
+                        }}
+                      >
+                        {isPreviewOpen ? "Hide Preview" : "Show Preview"}
+                      </button>
+                      <span>{previewRangeLabel}</span>
+                    </div>
+
+                    {isPreviewOpen ? (
+                      <section
+                        className="conflict-hunk-preview"
+                        ref={(element) => {
+                          previewSectionRefs.current[hunk.id] = element;
+                        }}
+                      >
+                        <div className="conflict-hunk-preview-title">{`Preview (${previewRangeLabel})`}</div>
+                        <div className="conflict-hunk-preview-body">
+                          {previewMarkdown.trim().length === 0 ? (
+                            <p className="conflict-empty">No text in this section.</p>
+                          ) : (
+                            <div className="conflict-markdown">
+                              <ReactMarkdown>{previewMarkdown}</ReactMarkdown>
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    ) : null}
                   </section>
                 );
               })
             )}
           </div>
-
-          <section className="conflict-preview-section">
-            <div className="conflict-section-title">Resolved Preview</div>
-            <div className="conflict-preview-body">
-              {resolvedMarkdown.trim().length === 0 ? (
-                <p className="conflict-empty">No content yet.</p>
-              ) : (
-                <div className="conflict-markdown">
-                  <ReactMarkdown>{resolvedMarkdown}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-          </section>
         </div>
 
         <div className="button-row conflict-footer-actions">

@@ -35,7 +35,43 @@ export interface DiffHunk {
   localLines: string[];
 }
 
-export type DiffChoice = "incoming" | "local";
+export type DiffChoice = "incoming" | "local" | "both_incoming_first" | "both_local_first";
+
+function mergeBothChoiceLines(primary: string[], secondary: string[]): string[] {
+  if (primary.length === 0) {
+    return [...secondary];
+  }
+
+  if (secondary.length === 0) {
+    return [...primary];
+  }
+
+  if (areEqual(primary, secondary)) {
+    return [...primary];
+  }
+
+  return [...primary, ...secondary];
+}
+
+export function resolveLinesForChoice(hunk: DiffHunk, choice: DiffChoice): string[] {
+  if (hunk.type === "equal") {
+    return [...hunk.localLines];
+  }
+
+  if (choice === "incoming") {
+    return [...hunk.incomingLines];
+  }
+
+  if (choice === "local") {
+    return [...hunk.localLines];
+  }
+
+  if (choice === "both_local_first") {
+    return mergeBothChoiceLines(hunk.localLines, hunk.incomingLines);
+  }
+
+  return mergeBothChoiceLines(hunk.incomingLines, hunk.localLines);
+}
 
 function splitLines(text: string): string[] {
   if (!text) {
@@ -467,7 +503,7 @@ export function composeResolvedFromHunks(
     }
 
     const selected = choices[hunk.id] ?? "local";
-    mergedLines.push(...(selected === "incoming" ? hunk.incomingLines : hunk.localLines));
+    mergedLines.push(...resolveLinesForChoice(hunk, selected));
   }
 
   return joinLines(mergedLines);

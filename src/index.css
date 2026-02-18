@@ -809,15 +809,52 @@ textarea {
   word-break: break-word;
 }
 
-.conflict-preview-section {
-  border: 1px solid var(--line-subtle);
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--surface-solid);
-  flex-shrink: 0;
+.conflict-hunk-preview-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px 10px;
 }
 
-.conflict-section-title {
+.conflict-hunk-preview-controls button {
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.conflict-hunk-preview-controls button:hover {
+  border-color: color-mix(in oklab, var(--line-strong) 45%, var(--accent));
+}
+
+.conflict-hunk-preview-controls button.is-active {
+  border-color: color-mix(in oklab, var(--line-strong) 30%, var(--accent));
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.conflict-hunk-preview-controls span {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.conflict-hunk-preview {
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-solid);
+  margin: 0 10px 10px;
+}
+
+.conflict-hunk-preview-title {
   margin: 0;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line-subtle);
@@ -828,9 +865,9 @@ textarea {
   text-transform: uppercase;
 }
 
-.conflict-preview-body {
+.conflict-hunk-preview-body {
   height: auto;
-  min-height: 300px;
+  min-height: 200px;
   max-height: 500px;
   overflow-y: auto;
   padding: 14px 14px 16px;
@@ -1011,12 +1048,17 @@ textarea {
   .conflict-hunk-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
   .conflict-hunk-actions button {
     width: 100%;
     border-radius: 10px;
+  }
+
+  .conflict-hunk-preview-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .diff-grid {
