@@ -6,6 +6,9 @@ interface SyncPanelProps {
   isConnected: boolean;
   isSyncing: boolean;
   hasDropboxAppKey: boolean;
+  updatedAtText: string;
+  lastSyncedAtText: string;
+  isOnline: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onSync: () => void;
@@ -18,6 +21,9 @@ export function SyncPanel({
   isConnected,
   isSyncing,
   hasDropboxAppKey,
+  updatedAtText,
+  lastSyncedAtText,
+  isOnline,
   onConnect,
   onDisconnect,
   onSync,
@@ -59,6 +65,14 @@ export function SyncPanel({
           <Files size={15} />
           <span>Export split pages</span>
         </button>
+      </div>
+      <div className="meta-box mobile-meta-box">
+        <div>Updated: {updatedAtText}</div>
+        <div>Synced: {lastSyncedAtText}</div>
+        <div className={`status-row ${isOnline ? "online" : "offline"}`}>
+          <span className="status-dot" aria-hidden="true" />
+          <span>{isOnline ? "Online" : "Offline"}</span>
+        </div>
       </div>
       {!hasDropboxAppKey ? (
         <div className="warning-box">Set VITE_DROPBOX_APP_KEY and optionally VITE_DROPBOX_REDIRECT_URI.</div>

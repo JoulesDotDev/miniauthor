@@ -8,6 +8,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { Menu, X } from "lucide-react";
 
 import { useEditorChrome } from "@/contexts/EditorChromeContext";
 import type { Block } from "@/lib/editor-types";
@@ -333,7 +334,7 @@ function EditorCanvasComponent({
   onBlocksChange,
   onSelectionToolbarChange,
 }: EditorCanvasProps) {
-  const { menuLabel, toggleChrome } = useEditorChrome();
+  const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
 
   const initialConfig = useMemo(
@@ -371,9 +372,12 @@ function EditorCanvasComponent({
         className="floating-toggle"
         type="button"
         onClick={toggleChrome}
-        aria-label="Toggle menu panels"
+        aria-label={showChrome ? "Close menu" : "Open menu"}
       >
-        {menuLabel}
+        <span className="floating-toggle-label">{menuLabel}</span>
+        <span className="floating-toggle-icon" aria-hidden="true">
+          {showChrome ? <X size={18} /> : <Menu size={18} />}
+        </span>
       </button>
 
       <LexicalComposer initialConfig={initialConfig}>

@@ -185,6 +185,9 @@ export function App() {
           isConnected={Boolean(dropboxToken)}
           isSyncing={isSyncing}
           hasDropboxAppKey={Boolean(dropboxAppKey)}
+          updatedAtText={formatTime(updatedAt)}
+          lastSyncedAtText={formatTime(lastSyncedAt)}
+          isOnline={isOnline}
           onConnect={() => {
             void connectDropbox();
           }}
