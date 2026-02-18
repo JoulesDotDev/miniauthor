@@ -156,7 +156,16 @@ export function App() {
 
   return (
     <EditorChromeProvider showChrome={showChrome} toggleChrome={toggleChrome} isMac={isMac}>
-      <div className={`app-shell ${showChrome ? "chrome-visible" : ""}`}>
+      <div
+        className={`app-shell ${showChrome ? "chrome-visible" : ""}`}
+        onPointerDownCapture={(event) => {
+          const target = event.target as HTMLElement;
+
+          if (target.closest(".settings-panel, .floating-toggle")) {
+            handleSelectionToolbarChange(false);
+          }
+        }}
+      >
         <SelectionToolbar
           visible={showSelectionToolbar}
           onBold={() => applyInlineFormat("bold")}

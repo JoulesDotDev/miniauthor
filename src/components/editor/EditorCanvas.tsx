@@ -436,7 +436,10 @@ function EditorCanvasComponent({
       <button
         className={`floating-toggle ${isDesktopPointer && !showFloatingToggle ? "inactive" : ""}`}
         type="button"
-        onClick={toggleChrome}
+        onClick={() => {
+          onSelectionToolbarChange(false);
+          toggleChrome();
+        }}
         aria-label={showChrome ? "Close menu" : "Open menu"}
       >
         <span className="floating-toggle-label">{menuLabel}</span>
