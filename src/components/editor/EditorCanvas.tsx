@@ -18,8 +18,11 @@ import {
   lexicalManuscriptNeedsFix,
   markdownFromBlocksForCompare,
   readBlocksFromLexicalRoot,
+  restoreTitleBlockFromHtml,
   selectCurrentTopLevelBlockContent,
+  titleBlockIsEmpty,
   selectionTouchesTitleBlock,
+  selectTopLevelBlockContentByKey,
   setSelectedTopLevelBlocksToType,
   tryHandleEnterInTitle,
   writeBlocksToLexicalRoot,
@@ -96,6 +99,15 @@ function keepCaretComfortablyVisible(editor: LexicalEditor): void {
   if (caretBottom > targetBottom) {
     window.scrollBy({ top: caretBottom - targetBottom, behavior: "auto" });
   }
+}
+
+function hasMeaningfulInlineHtml(html: string): boolean {
+  return html
+    .replace(/<br\s*\/?>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim()
+    .length > 0;
 }
 
 function decorateEditorBlocks(editor: LexicalEditor): void {
@@ -200,6 +212,7 @@ interface BehaviorPluginProps {
 
 function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: BehaviorPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const lastNonEmptyTitleHtmlRef = useRef<string>("");
 
   useEffect(() => {
     let frameId: number | null = null;
@@ -255,6 +268,31 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
 
         const key = event.key.toLowerCase();
 
+        if (key === "z") {
+          let shouldRestoreTitle = false;
+          editor.getEditorState().read(() => {
+            const selectionInTitle = selectionTouchesTitleBlock();
+            const titleIsEmpty = titleBlockIsEmpty();
+            shouldRestoreTitle =
+              selectionInTitle &&
+              titleIsEmpty &&
+              lastNonEmptyTitleHtmlRef.current.trim().length > 0;
+          });
+
+          if (!shouldRestoreTitle) {
+            return false;
+          }
+
+          event.preventDefault();
+          const titleHtml = lastNonEmptyTitleHtmlRef.current;
+
+          editor.update(() => {
+            restoreTitleBlockFromHtml(titleHtml);
+          });
+
+          return true;
+        }
+
         if (key === "b" || key === "i") {
           event.preventDefault();
 
@@ -308,19 +346,10 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
         });
 
         if (focusedBlockKey) {
-          const blockElement = editor.getElementByKey(focusedBlockKey);
-
-          if (blockElement) {
-            const domSelection = window.getSelection();
-
-            if (domSelection) {
-              const range = document.createRange();
-              range.selectNodeContents(blockElement);
-              domSelection.removeAllRanges();
-              domSelection.addRange(range);
-              return true;
-            }
-          }
+          editor.update(() => {
+            selectTopLevelBlockContentByKey(focusedBlockKey as string);
+          });
+          return true;
         }
 
         selectCurrentTopLevelBlockContent(editor);
@@ -370,6 +399,11 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
       }
 
       if (hasDocumentMutation) {
+        const nextTitle = nextBlocks[0];
+        if (nextTitle?.type === "title" && hasMeaningfulInlineHtml(nextTitle.text)) {
+          lastNonEmptyTitleHtmlRef.current = nextTitle.text;
+        }
+
         onBlocksChange(nextBlocks);
         scheduleComfortScroll();
       }

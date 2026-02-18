@@ -1,5 +1,6 @@
 import { $createHeadingNode, $isHeadingNode } from "@lexical/rich-text";
 import {
+  $createRangeSelection,
   $createLineBreakNode,
   $createParagraphNode,
   $createTextNode,
@@ -10,6 +11,7 @@ import {
   $isParagraphNode,
   $isRangeSelection,
   $isTextNode,
+  $setSelection,
   type ElementNode,
   type LexicalEditor,
   type LexicalNode,
@@ -447,48 +449,51 @@ export function tryHandleEnterInTitle(): boolean {
 }
 
 export function selectCurrentTopLevelBlockContent(editor: LexicalEditor): void {
-  const domSelection = window.getSelection();
+  editor.update(() => {
+    const selection = $getSelection();
 
-  if (!domSelection) {
+    if (!$isRangeSelection(selection)) {
+      return;
+    }
+
+    const top = selection.anchor.getNode().getTopLevelElement();
+    if (!top || top.getParent() !== $getRoot() || !$isElementNode(top)) {
+      return;
+    }
+
+    selectElementContent(top);
+  });
+}
+
+function selectElementContent(element: ElementNode): void {
+  const textNodes = element.getAllTextNodes();
+
+  if (!textNodes.length) {
+    element.selectStart();
     return;
   }
 
-  let targetElement: HTMLElement | null = null;
+  const firstText = textNodes[0];
+  const lastText = textNodes[textNodes.length - 1];
+  const rangeSelection = $createRangeSelection();
 
-  if (domSelection.anchorNode) {
-    const anchorParent =
-      domSelection.anchorNode instanceof HTMLElement
-        ? domSelection.anchorNode
-        : domSelection.anchorNode.parentElement;
+  rangeSelection.anchor.set(firstText.getKey(), 0, "text");
+  rangeSelection.focus.set(lastText.getKey(), lastText.getTextContentSize(), "text");
+  $setSelection(rangeSelection);
+}
 
-    targetElement = anchorParent?.closest<HTMLElement>("[data-block-id]") ?? null;
+export function selectTopLevelBlockContentByKey(blockKey: string): boolean {
+  const root = $getRoot();
+  const target = root.getChildren().find(
+    (node): node is ElementNode => $isElementNode(node) && node.getKey() === blockKey,
+  );
+
+  if (!target) {
+    return false;
   }
 
-  if (!targetElement) {
-    editor.getEditorState().read(() => {
-      const selection = $getSelection();
-
-      if (!$isRangeSelection(selection)) {
-        return;
-      }
-
-      const top = selection.anchor.getNode().getTopLevelElement();
-      if (!top) {
-        return;
-      }
-
-      targetElement = editor.getElementByKey(top.getKey());
-    });
-  }
-
-  if (!targetElement) {
-    return;
-  }
-
-  const range = document.createRange();
-  range.selectNodeContents(targetElement);
-  domSelection.removeAllRanges();
-  domSelection.addRange(range);
+  selectElementContent(target);
+  return true;
 }
 
 export function markdownFromBlocksForCompare(blocks: Block[]): string {
@@ -497,4 +502,39 @@ export function markdownFromBlocksForCompare(blocks: Block[]): string {
 
 export function createInitialBlocks(): Block[] {
   return [createBlock("title"), createBlock("paragraph")];
+}
+
+export function titleBlockIsEmpty(): boolean {
+  const first = $getRoot().getFirstChild();
+
+  if (!first || !$isElementNode(first)) {
+    return true;
+  }
+
+  return isLexicalElementEmpty(first);
+}
+
+export function restoreTitleBlockFromHtml(html: string): boolean {
+  const first = $getRoot().getFirstChild();
+
+  if (!first || !$isElementNode(first)) {
+    return false;
+  }
+
+  let titleNode: ElementNode = first;
+  if (!$isHeadingNode(first) || first.getTag() !== "h1") {
+    titleNode = convertElementNodeType(first, "title");
+  }
+
+  titleNode.clear();
+
+  if (typeof document !== "undefined" && html.trim().length > 0) {
+    const parserHost = document.createElement("div");
+    parserHost.innerHTML = html;
+    appendDomChildrenToElement(titleNode, parserHost.childNodes, EMPTY_INLINE_FORMATS);
+  }
+
+  ensureLexicalManuscriptStructure();
+  titleNode.selectEnd();
+  return true;
 }
