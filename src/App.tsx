@@ -63,6 +63,20 @@ function detectMacPlatform(): boolean {
   return /Mac|iPhone|iPad|iPod/i.test(platform);
 }
 
+function detectMobileOSPlatform(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform ?? "";
+  const userAgent = navigator.userAgent ?? "";
+  const isIos = /iPhone|iPad|iPod/i.test(platform) || /iPhone|iPad|iPod/i.test(userAgent);
+  const isAndroid = /Android/i.test(platform) || /Android/i.test(userAgent);
+
+  return isIos || isAndroid;
+}
+
 export function App() {
   const dropboxAppKey = import.meta.env.VITE_DROPBOX_APP_KEY as string | undefined;
   const dropboxRedirectUri =
@@ -77,6 +91,7 @@ export function App() {
   const [hasThemeOverride, setHasThemeOverride] = useState<boolean>(() => getStoredTheme() !== null);
 
   const isMac = useMemo(() => detectMacPlatform(), []);
+  const isMobileOS = useMemo(() => detectMobileOSPlatform(), []);
   const toggleChrome = useCallback(() => {
     setShowChrome((current) => !current);
   }, []);
@@ -227,7 +242,12 @@ export function App() {
   }, [handleSelectionToolbarChange, isConflictOpen]);
 
   return (
-    <EditorChromeProvider showChrome={showChrome} toggleChrome={toggleChrome} isMac={isMac}>
+    <EditorChromeProvider
+      showChrome={showChrome}
+      toggleChrome={toggleChrome}
+      isMac={isMac}
+      isMobileOS={isMobileOS}
+    >
       <div
         className={`app-shell ${showChrome ? "chrome-visible" : ""} ${isConflictOpen ? "conflict-open" : ""}`}
         onPointerDownCapture={(event) => {
@@ -261,6 +281,7 @@ export function App() {
           isConnected={Boolean(dropboxToken)}
           isSyncing={isSyncing}
           hasDropboxAppKey={Boolean(dropboxAppKey)}
+          hideShortcuts={isMobileOS}
           theme={theme}
           updatedAtText={formatTime(updatedAt)}
           lastSyncedAtText={formatTime(lastSyncedAt)}

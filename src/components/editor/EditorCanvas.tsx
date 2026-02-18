@@ -538,7 +538,7 @@ function EditorCanvasComponent({
   onSelectionToolbarChange,
   onSelectionToolbarActiveChange,
 }: EditorCanvasProps) {
-  const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
+  const { showChrome, menuLabel, toggleChrome, isMobileOS } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
   const [isDesktopPointer, setIsDesktopPointer] = useState<boolean>(() => {
     if (typeof window === "undefined") {
@@ -638,7 +638,9 @@ function EditorCanvasComponent({
   return (
     <main className="editor-shell">
       <button
-        className={`floating-toggle ${isDesktopPointer && !showFloatingToggle ? "inactive" : ""}`}
+        className={`floating-toggle ${isMobileOS ? "mobile-os" : ""} ${
+          isDesktopPointer && !showFloatingToggle ? "inactive" : ""
+        }`}
         type="button"
         onClick={() => {
           onSelectionToolbarChange(false);

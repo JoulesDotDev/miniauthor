@@ -6,6 +6,7 @@ interface SyncPanelProps {
   isConnected: boolean;
   isSyncing: boolean;
   hasDropboxAppKey: boolean;
+  hideShortcuts: boolean;
   theme: "light" | "dark";
   updatedAtText: string;
   lastSyncedAtText: string;
@@ -48,6 +49,7 @@ export function SyncPanel({
   isConnected,
   isSyncing,
   hasDropboxAppKey,
+  hideShortcuts,
   theme,
   updatedAtText,
   lastSyncedAtText,
@@ -83,6 +85,15 @@ export function SyncPanel({
           <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
         </button>
       </div>
+      <div className="meta-box status-meta-box">
+        <div>Updated: {updatedAtText}</div>
+        <div>Synced: {lastSyncedAtText}</div>
+        <div className={`status-row ${isOnline ? "online" : "offline"}`}>
+          <span className="status-dot" aria-hidden="true" />
+          <span>{isOnline ? "Online" : "Offline"}</span>
+        </div>
+      </div>
+      <h2 className="panel-section-title">Export</h2>
       <div className="button-row export-actions">
         <button type="button" onClick={onExportMarkdown}>
           <FileDown size={15} />
@@ -93,32 +104,27 @@ export function SyncPanel({
           <span>Export split pages</span>
         </button>
       </div>
+      <h2 className="panel-section-title">Settings</h2>
       <div className="button-row theme-actions">
         <button type="button" onClick={onToggleTheme}>
           {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
           <span>{theme === "dark" ? "Use light theme" : "Use dark theme"}</span>
         </button>
       </div>
-      <div className="shortcuts-section">
-        <h2>Shortcuts</h2>
-        <p>Writing-first controls.</p>
-        <div className="shortcut-list" aria-label="Keyboard shortcuts">
-          {shortcuts.map((item) => (
-            <div key={item.key} className="shortcut-row">
-              <kbd>{renderShortcutKey(item.key, isMac)}</kbd>
-              <span>{item.action}</span>
-            </div>
-          ))}
+      {hideShortcuts ? null : (
+        <div className="shortcuts-section">
+          <h2>Shortcuts</h2>
+          <p>Writing-first controls.</p>
+          <div className="shortcut-list" aria-label="Keyboard shortcuts">
+            {shortcuts.map((item) => (
+              <div key={item.key} className="shortcut-row">
+                <kbd>{renderShortcutKey(item.key, isMac)}</kbd>
+                <span>{item.action}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="meta-box status-meta-box">
-        <div>Updated: {updatedAtText}</div>
-        <div>Synced: {lastSyncedAtText}</div>
-        <div className={`status-row ${isOnline ? "online" : "offline"}`}>
-          <span className="status-dot" aria-hidden="true" />
-          <span>{isOnline ? "Online" : "Offline"}</span>
-        </div>
-      </div>
+      )}
       {!hasDropboxAppKey ? (
         <div className="warning-box">Set VITE_DROPBOX_APP_KEY and optionally VITE_DROPBOX_REDIRECT_URI.</div>
       ) : null}

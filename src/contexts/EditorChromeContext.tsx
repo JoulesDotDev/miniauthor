@@ -5,6 +5,7 @@ interface EditorChromeContextValue {
   showChrome: boolean;
   toggleChrome: () => void;
   isMac: boolean;
+  isMobileOS: boolean;
   menuLabel: string;
 }
 
@@ -15,6 +16,7 @@ interface EditorChromeProviderProps {
   showChrome: boolean;
   toggleChrome: () => void;
   isMac: boolean;
+  isMobileOS: boolean;
 }
 
 export function EditorChromeProvider({
@@ -22,15 +24,17 @@ export function EditorChromeProvider({
   showChrome,
   toggleChrome,
   isMac,
+  isMobileOS,
 }: EditorChromeProviderProps) {
   const value = useMemo<EditorChromeContextValue>(
     () => ({
       showChrome,
       toggleChrome,
       isMac,
+      isMobileOS,
       menuLabel: "esc",
     }),
-    [isMac, showChrome, toggleChrome],
+    [isMac, isMobileOS, showChrome, toggleChrome],
   );
 
   return <EditorChromeContext.Provider value={value}>{children}</EditorChromeContext.Provider>;
