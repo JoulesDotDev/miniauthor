@@ -188,6 +188,7 @@ export function ConflictModal({
                           ))}
                         </div>
                       </div>
+
                     </div>
                   </section>
                 );

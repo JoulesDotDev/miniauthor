@@ -603,7 +603,7 @@ textarea {
 
 .conflict-modal {
   width: min(1240px, calc(100vw - 24px));
-  height: min(860px, calc(100dvh - 24px));
+  height: auto;
   max-height: calc(100dvh - 24px);
   background: var(--modal-bg);
   border: 1px solid color-mix(in oklab, var(--panel-border) 85%, transparent);

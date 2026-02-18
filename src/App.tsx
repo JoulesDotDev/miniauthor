@@ -178,7 +178,7 @@ export function App() {
         return;
       }
 
-      if (event.key === "Alt" && !event.repeat) {
+      if ((event.key === "Escape" || event.key === "Esc") && !event.repeat) {
         event.preventDefault();
         toggleChrome();
         return;

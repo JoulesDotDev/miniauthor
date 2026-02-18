@@ -28,7 +28,7 @@ export function EditorChromeProvider({
       showChrome,
       toggleChrome,
       isMac,
-      menuLabel: isMac ? "⌥" : "alt",
+      menuLabel: "esc",
     }),
     [isMac, showChrome, toggleChrome],
   );
