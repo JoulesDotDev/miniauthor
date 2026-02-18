@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
-import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, type LexicalEditor } from "lexical";
+import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, KEY_ENTER_COMMAND, type ElementNode as LexicalElementNode, type LexicalEditor, type LexicalNode } from "lexical";
 import { HeadingNode, $isHeadingNode } from "@lexical/rich-text";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -33,7 +33,24 @@ interface EditorCanvasProps {
   onEditorReady: (editor: LexicalEditor | null) => void;
   onBlocksChange: (nextBlocks: Block[]) => void;
   onSelectionToolbarChange: (visible: boolean) => void;
+  onSelectionToolbarActiveChange: (state: SelectionToolbarActiveState) => void;
 }
+
+interface SelectionToolbarActiveState {
+  bold: boolean;
+  italic: boolean;
+  heading1: boolean;
+  heading2: boolean;
+  paragraph: boolean;
+}
+
+const EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE: SelectionToolbarActiveState = {
+  bold: false,
+  italic: false,
+  heading1: false,
+  heading2: false,
+  paragraph: false,
+};
 
 function placeholderForType(type: Block["type"]): string {
   if (type === "title") {
@@ -99,6 +116,79 @@ function keepCaretComfortablyVisible(editor: LexicalEditor): void {
   if (caretBottom > targetBottom) {
     window.scrollBy({ top: caretBottom - targetBottom, behavior: "auto" });
   }
+}
+
+function resolveNonTitleBlockType(
+  node: LexicalElementNode,
+  titleKey: string | null,
+): "heading1" | "heading2" | "paragraph" | null {
+  if (titleKey && node.getKey() === titleKey) {
+    return null;
+  }
+
+  if ($isHeadingNode(node)) {
+    return node.getTag() === "h3" ? "heading2" : "heading1";
+  }
+
+  return "paragraph";
+}
+
+function readSelectionToolbarActiveState(): SelectionToolbarActiveState {
+  const selection = $getSelection();
+
+  if (!$isRangeSelection(selection) || selection.isCollapsed()) {
+    return EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
+  }
+
+  if (selection.getTextContent().trim().length === 0 || selectionTouchesTitleBlock()) {
+    return EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
+  }
+
+  const selectedNodes = selection.getNodes();
+  const selectedTextNodes = selectedNodes.filter($isTextNode).filter((node) => node.getTextContentSize() > 0);
+  const boldActive =
+    selectedTextNodes.length > 0
+      ? selectedTextNodes.every((node) => node.hasFormat("bold"))
+      : selection.hasFormat("bold");
+  const italicActive =
+    selectedTextNodes.length > 0
+      ? selectedTextNodes.every((node) => node.hasFormat("italic"))
+      : selection.hasFormat("italic");
+
+  const root = $getRoot();
+  const first = root.getFirstChild();
+  const titleKey = $isElementNode(first) ? first.getKey() : null;
+  const selectedTopLevelNodes = new Map<string, LexicalElementNode>();
+
+  const markTopLevel = (node: LexicalNode) => {
+    const top = node.getTopLevelElement();
+
+    if (!top || top.getParent() !== root || !$isElementNode(top)) {
+      return;
+    }
+
+    selectedTopLevelNodes.set(top.getKey(), top);
+  };
+
+  selectedNodes.forEach(markTopLevel);
+  markTopLevel(selection.anchor.getNode());
+  markTopLevel(selection.focus.getNode());
+
+  const blockTypes = Array.from(selectedTopLevelNodes.values())
+    .map((node) => resolveNonTitleBlockType(node, titleKey))
+    .filter((type): type is "heading1" | "heading2" | "paragraph" => type !== null);
+  const singleBlockType =
+    blockTypes.length > 0 && blockTypes.every((type) => type === blockTypes[0])
+      ? blockTypes[0]
+      : null;
+
+  return {
+    bold: boldActive,
+    italic: italicActive,
+    heading1: singleBlockType === "heading1",
+    heading2: singleBlockType === "heading2",
+    paragraph: singleBlockType === "paragraph",
+  };
 }
 
 function hasMeaningfulInlineHtml(html: string): boolean {
@@ -208,9 +298,14 @@ function ExternalBlocksSyncPlugin({ blocks }: { blocks: Block[] }) {
 interface BehaviorPluginProps {
   onBlocksChange: (nextBlocks: Block[]) => void;
   onSelectionToolbarChange: (visible: boolean) => void;
+  onSelectionToolbarActiveChange: (state: SelectionToolbarActiveState) => void;
 }
 
-function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: BehaviorPluginProps) {
+function ManuscriptBehaviorPlugin({
+  onBlocksChange,
+  onSelectionToolbarChange,
+  onSelectionToolbarActiveChange,
+}: BehaviorPluginProps) {
   const [editor] = useLexicalComposerContext();
   const lastNonEmptyTitleHtmlRef = useRef<string>("");
 
@@ -362,6 +457,7 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
       let needsFix = false;
       let hasSelectionText = false;
       let selectionIncludesTitle = false;
+      let nextSelectionToolbarActiveState = EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
       const hasDocumentMutation = dirtyElements.size > 0 || dirtyLeaves.size > 0;
       let nextBlocks: Block[] = [];
 
@@ -378,9 +474,15 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
           !selection.isCollapsed() &&
           selection.getTextContent().trim().length > 0;
         selectionIncludesTitle = selectionTouchesTitleBlock();
+        nextSelectionToolbarActiveState = readSelectionToolbarActiveState();
       });
 
       onSelectionToolbarChange(hasSelectionText && !selectionIncludesTitle);
+      onSelectionToolbarActiveChange(
+        hasSelectionText && !selectionIncludesTitle
+          ? nextSelectionToolbarActiveState
+          : EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE,
+      );
       scheduleDecoration();
 
       if (needsFix) {
@@ -424,7 +526,7 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
         window.cancelAnimationFrame(scrollFrameId);
       }
     };
-  }, [editor, onBlocksChange, onSelectionToolbarChange]);
+  }, [editor, onBlocksChange, onSelectionToolbarActiveChange, onSelectionToolbarChange]);
 
   return null;
 }
@@ -434,6 +536,7 @@ function EditorCanvasComponent({
   onEditorReady,
   onBlocksChange,
   onSelectionToolbarChange,
+  onSelectionToolbarActiveChange,
 }: EditorCanvasProps) {
   const { showChrome, menuLabel, toggleChrome } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
@@ -555,6 +658,7 @@ function EditorCanvasComponent({
         <ManuscriptBehaviorPlugin
           onBlocksChange={onBlocksChange}
           onSelectionToolbarChange={onSelectionToolbarChange}
+          onSelectionToolbarActiveChange={onSelectionToolbarActiveChange}
         />
         <RichTextPlugin
           contentEditable={<ContentEditable className="paper-column editor-content" aria-label="Manuscript editor" />}

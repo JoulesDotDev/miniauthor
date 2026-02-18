@@ -9,6 +9,13 @@ import {
 
 interface SelectionToolbarProps {
   visible: boolean;
+  active: {
+    bold: boolean;
+    italic: boolean;
+    heading1: boolean;
+    heading2: boolean;
+    paragraph: boolean;
+  };
   onBold: () => void;
   onItalic: () => void;
   onHeading1: () => void;
@@ -18,6 +25,7 @@ interface SelectionToolbarProps {
 
 export function SelectionToolbar({
   visible,
+  active,
   onBold,
   onItalic,
   onHeading1,
@@ -37,20 +45,55 @@ export function SelectionToolbar({
 
   return (
     <div className="selection-toolbar" role="toolbar" aria-label="Text formatting">
-      <button {...buttonProps} onClick={onBold} title="Bold" aria-label="Bold">
+      <button
+        {...buttonProps}
+        className={active.bold ? "is-active" : undefined}
+        aria-pressed={active.bold}
+        onClick={onBold}
+        title="Bold"
+        aria-label="Bold"
+      >
         <Bold size={16} />
       </button>
-      <button {...buttonProps} onClick={onItalic} title="Italic" aria-label="Italic">
+      <button
+        {...buttonProps}
+        className={active.italic ? "is-active" : undefined}
+        aria-pressed={active.italic}
+        onClick={onItalic}
+        title="Italic"
+        aria-label="Italic"
+      >
         <Italic size={16} />
       </button>
       <span className="selection-toolbar-sep" />
-      <button {...buttonProps} onClick={onHeading1} title="Heading 1" aria-label="Heading 1">
+      <button
+        {...buttonProps}
+        className={active.heading1 ? "is-active" : undefined}
+        aria-pressed={active.heading1}
+        onClick={onHeading1}
+        title="Heading 1"
+        aria-label="Heading 1"
+      >
         <Heading2 size={16} />
       </button>
-      <button {...buttonProps} onClick={onHeading2} title="Heading 2" aria-label="Heading 2">
+      <button
+        {...buttonProps}
+        className={active.heading2 ? "is-active" : undefined}
+        aria-pressed={active.heading2}
+        onClick={onHeading2}
+        title="Heading 2"
+        aria-label="Heading 2"
+      >
         <Heading3 size={16} />
       </button>
-      <button {...buttonProps} onClick={onParagraph} title="Paragraph" aria-label="Paragraph">
+      <button
+        {...buttonProps}
+        className={active.paragraph ? "is-active" : undefined}
+        aria-pressed={active.paragraph}
+        onClick={onParagraph}
+        title="Paragraph"
+        aria-label="Paragraph"
+      >
         <Pilcrow size={16} />
       </button>
     </div>

@@ -580,6 +580,11 @@ textarea {
   background: var(--hover-soft);
 }
 
+.selection-toolbar button.is-active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
 .selection-toolbar-sep {
   width: 1px;
   height: 18px;

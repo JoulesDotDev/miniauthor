@@ -93,9 +93,11 @@ export function App() {
   const {
     markdownPreview,
     showSelectionToolbar,
+    selectionToolbarActive,
     setLexicalEditor,
     handleEditorBlocksChange,
     handleSelectionToolbarChange,
+    handleSelectionToolbarActiveChange,
     transformFocusedBlockType,
     applyInlineFormat,
   } = editor;
@@ -238,6 +240,7 @@ export function App() {
       >
         <SelectionToolbar
           visible={showSelectionToolbar && !isConflictOpen}
+          active={selectionToolbarActive}
           onBold={() => applyInlineFormat("bold")}
           onItalic={() => applyInlineFormat("italic")}
           onHeading1={() => transformFocusedBlockType("heading1")}
@@ -250,6 +253,7 @@ export function App() {
           onEditorReady={setLexicalEditor}
           onBlocksChange={handleEditorBlocksChange}
           onSelectionToolbarChange={handleSelectionToolbarChange}
+          onSelectionToolbarActiveChange={handleSelectionToolbarActiveChange}
         />
 
         <SyncPanel
