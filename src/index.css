@@ -170,8 +170,8 @@
   --status-online: #63d496;
   --status-offline: #ef877d;
   --overlay: rgba(0, 0, 0, 0.64);
-  --panel-shadow: 0 24px 62px rgba(0, 0, 0, 0.5);
-  --toolbar-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  --panel-shadow: none;
+  --toolbar-shadow: none;
   --hover-paper: #2c261d;
   --hover-paper-pressed: #352d22;
   --hover-paper-border: #7a6949;
@@ -348,6 +348,13 @@ textarea {
   box-shadow: var(--panel-shadow);
   cursor: pointer;
   transition: opacity 0.22s ease, transform 0.22s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+[data-theme="dark"] .floating-toggle,
+.dark .floating-toggle {
+  box-shadow: none;
+  backdrop-filter: none;
+  background: var(--surface-solid);
 }
 
 .floating-toggle:hover {

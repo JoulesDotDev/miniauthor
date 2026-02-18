@@ -9,7 +9,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { List, Menu, X } from "lucide-react";
+import { BookText, Menu, X } from "lucide-react";
 
 import { useEditorChrome } from "@/contexts/EditorChromeContext";
 import type { Block } from "@/lib/editor-types";
@@ -814,7 +814,7 @@ function EditorCanvasComponent({
         aria-label={showMap ? "Close map" : "Open map"}
       >
         <span className="floating-toggle-icon" aria-hidden="true">
-          <List size={18} />
+          <BookText size={18} />
         </span>
       </button>
 
