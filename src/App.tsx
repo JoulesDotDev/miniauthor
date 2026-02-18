@@ -11,6 +11,25 @@ import type { Block } from "@/lib/editor-types";
 import { buildSideBySideDiffRows } from "@/lib/merge";
 import { createBlock, splitBlocksToMarkdownPages } from "@/lib/markdown";
 
+const THEME_STORAGE_KEY = "book-writer-theme";
+
+function getStoredTheme(): "light" | "dark" | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return storedTheme === "light" || storedTheme === "dark" ? storedTheme : null;
+}
+
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 function formatTime(timestamp: number | null): string {
   if (!timestamp) {
     return "Never";
@@ -55,10 +74,16 @@ export function App() {
   const [updatedAt, setUpdatedAt] = useState<number>(Date.now());
   const [showChrome, setShowChrome] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [theme, setTheme] = useState<"light" | "dark">(() => getStoredTheme() ?? getSystemTheme());
+  const [hasThemeOverride, setHasThemeOverride] = useState<boolean>(() => getStoredTheme() !== null);
 
   const isMac = useMemo(() => detectMacPlatform(), []);
   const toggleChrome = useCallback(() => {
     setShowChrome((current) => !current);
+  }, []);
+  const toggleTheme = useCallback(() => {
+    setHasThemeOverride(true);
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
   const editor = useManuscriptEditor({
@@ -118,6 +143,35 @@ export function App() {
       window.removeEventListener("offline", refreshOnlineState);
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  useEffect(() => {
+    if (!hasThemeOverride) {
+      return;
+    }
+
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [hasThemeOverride, theme]);
+
+  useEffect(() => {
+    if (hasThemeOverride) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncWithSystemTheme = () => {
+      setTheme(mediaQuery.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", syncWithSystemTheme);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncWithSystemTheme);
+    };
+  }, [hasThemeOverride]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -187,9 +241,11 @@ export function App() {
           isConnected={Boolean(dropboxToken)}
           isSyncing={isSyncing}
           hasDropboxAppKey={Boolean(dropboxAppKey)}
+          theme={theme}
           updatedAtText={formatTime(updatedAt)}
           lastSyncedAtText={formatTime(lastSyncedAt)}
           isOnline={isOnline}
+          onToggleTheme={toggleTheme}
           onConnect={() => {
             void connectDropbox();
           }}

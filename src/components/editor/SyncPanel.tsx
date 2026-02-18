@@ -1,14 +1,16 @@
 import { useEditorChrome } from "@/contexts/EditorChromeContext";
-import { FileDown, Files, Link2, RefreshCw, Unlink2 } from "lucide-react";
+import { FileDown, Files, Link2, Moon, RefreshCw, Sun, Unlink2 } from "lucide-react";
 
 interface SyncPanelProps {
   syncNotice: string;
   isConnected: boolean;
   isSyncing: boolean;
   hasDropboxAppKey: boolean;
+  theme: "light" | "dark";
   updatedAtText: string;
   lastSyncedAtText: string;
   isOnline: boolean;
+  onToggleTheme: () => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onSync: () => void;
@@ -46,9 +48,11 @@ export function SyncPanel({
   isConnected,
   isSyncing,
   hasDropboxAppKey,
+  theme,
   updatedAtText,
   lastSyncedAtText,
   isOnline,
+  onToggleTheme,
   onConnect,
   onDisconnect,
   onSync,
@@ -89,6 +93,12 @@ export function SyncPanel({
         <button type="button" onClick={onExportSplitPages}>
           <Files size={15} />
           <span>Export split pages</span>
+        </button>
+      </div>
+      <div className="button-row theme-actions">
+        <button type="button" onClick={onToggleTheme}>
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          <span>{theme === "dark" ? "Use light theme" : "Use dark theme"}</span>
         </button>
       </div>
       <div className="shortcuts-section">
