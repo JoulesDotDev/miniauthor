@@ -291,6 +291,25 @@ textarea {
   place-items: center;
 }
 
+.floating-map-toggle {
+  bottom: 84px;
+}
+
+.floating-map-toggle .floating-toggle-icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.floating-map-toggle .floating-toggle-label {
+  display: none;
+}
+
+.floating-map-toggle.is-active {
+  border-color: var(--hover-paper-border);
+  background: var(--hover-paper);
+  color: var(--text-main);
+}
+
 .paper-column {
   width: min(100%, 210mm);
   min-height: calc(100vh - 56px);
@@ -422,6 +441,14 @@ textarea {
   transform: translateX(104%);
 }
 
+.map-panel {
+  right: 0;
+  left: auto;
+  border-right: 0;
+  border-left: 1px solid var(--line-subtle);
+  transform: translateX(104%);
+}
+
 .settings-panel.open {
   transform: translateX(0);
 }
@@ -453,6 +480,75 @@ textarea {
 
 .panel-section-title {
   margin-top: 20px !important;
+}
+
+.map-tree {
+  margin-top: 12px;
+  display: grid;
+  gap: 2px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.map-tree-item {
+  width: 100%;
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: 12px 18px 1fr;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  padding: 4px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-tree-item:hover {
+  background: var(--hover-paper);
+}
+
+.map-tree-item.is-active {
+  background: var(--hover-paper);
+  color: var(--text-main);
+}
+
+.map-tree-branch {
+  width: 10px;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.map-tree-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.map-tree-item.is-active .map-tree-icon {
+  color: var(--text-muted);
+}
+
+.map-tree-name {
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-tree-item.level-title {
+  grid-template-columns: 12px 18px 1fr;
+}
+
+.map-tree-item.level-heading1 {
+  padding-left: 18px;
+}
+
+.map-tree-item.level-heading2 {
+  padding-left: 28px;
 }
 
 .warning-box {
@@ -1005,11 +1101,25 @@ textarea {
     height: 48px;
   }
 
+  .floating-map-toggle.mobile-os {
+    bottom: 70px;
+  }
+
   .panel-left {
     display: none;
   }
 
   .panel-right {
+    inset: 0;
+    width: 100vw;
+    max-width: none;
+    border-left: 0;
+    border-radius: 0;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(92px, env(safe-area-inset-bottom));
+    transform: translateX(100%);
+  }
+
+  .map-panel {
     inset: 0;
     width: 100vw;
     max-width: none;

@@ -8,7 +8,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { Menu, X } from "lucide-react";
+import { List, Menu, X } from "lucide-react";
 
 import { useEditorChrome } from "@/contexts/EditorChromeContext";
 import type { Block } from "@/lib/editor-types";
@@ -34,6 +34,9 @@ interface EditorCanvasProps {
   onBlocksChange: (nextBlocks: Block[]) => void;
   onSelectionToolbarChange: (visible: boolean) => void;
   onSelectionToolbarActiveChange: (state: SelectionToolbarActiveState) => void;
+  onActiveBlockChange: (blockId: string | null) => void;
+  showMap: boolean;
+  onToggleMap: () => void;
 }
 
 interface SelectionToolbarActiveState {
@@ -299,15 +302,18 @@ interface BehaviorPluginProps {
   onBlocksChange: (nextBlocks: Block[]) => void;
   onSelectionToolbarChange: (visible: boolean) => void;
   onSelectionToolbarActiveChange: (state: SelectionToolbarActiveState) => void;
+  onActiveBlockChange: (blockId: string | null) => void;
 }
 
 function ManuscriptBehaviorPlugin({
   onBlocksChange,
   onSelectionToolbarChange,
   onSelectionToolbarActiveChange,
+  onActiveBlockChange,
 }: BehaviorPluginProps) {
   const [editor] = useLexicalComposerContext();
   const lastNonEmptyTitleHtmlRef = useRef<string>("");
+  const lastActiveBlockKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let frameId: number | null = null;
@@ -460,6 +466,7 @@ function ManuscriptBehaviorPlugin({
       let nextSelectionToolbarActiveState = EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
       const hasDocumentMutation = dirtyElements.size > 0 || dirtyLeaves.size > 0;
       let nextBlocks: Block[] = [];
+      let activeBlockKey: string | null = null;
 
       editorState.read(() => {
         needsFix = lexicalManuscriptNeedsFix();
@@ -475,6 +482,18 @@ function ManuscriptBehaviorPlugin({
           selection.getTextContent().trim().length > 0;
         selectionIncludesTitle = selectionTouchesTitleBlock();
         nextSelectionToolbarActiveState = readSelectionToolbarActiveState();
+
+        if ($isRangeSelection(selection)) {
+          const activeTopLevel = selection.anchor.getNode().getTopLevelElement();
+
+          if (
+            activeTopLevel &&
+            activeTopLevel.getParent() === $getRoot() &&
+            $isElementNode(activeTopLevel)
+          ) {
+            activeBlockKey = activeTopLevel.getKey();
+          }
+        }
       });
 
       onSelectionToolbarChange(hasSelectionText && !selectionIncludesTitle);
@@ -483,6 +502,12 @@ function ManuscriptBehaviorPlugin({
           ? nextSelectionToolbarActiveState
           : EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE,
       );
+
+      if (lastActiveBlockKeyRef.current !== activeBlockKey) {
+        lastActiveBlockKeyRef.current = activeBlockKey;
+        onActiveBlockChange(activeBlockKey);
+      }
+
       scheduleDecoration();
 
       if (needsFix) {
@@ -526,7 +551,7 @@ function ManuscriptBehaviorPlugin({
         window.cancelAnimationFrame(scrollFrameId);
       }
     };
-  }, [editor, onBlocksChange, onSelectionToolbarActiveChange, onSelectionToolbarChange]);
+  }, [editor, onActiveBlockChange, onBlocksChange, onSelectionToolbarActiveChange, onSelectionToolbarChange]);
 
   return null;
 }
@@ -537,6 +562,9 @@ function EditorCanvasComponent({
   onBlocksChange,
   onSelectionToolbarChange,
   onSelectionToolbarActiveChange,
+  onActiveBlockChange,
+  showMap,
+  onToggleMap,
 }: EditorCanvasProps) {
   const { showChrome, menuLabel, toggleChrome, isMobileOS } = useEditorChrome();
   const initialBlocksRef = useRef<Block[]>(blocks);
@@ -603,7 +631,7 @@ function EditorCanvasComponent({
       return;
     }
 
-    if (showChrome) {
+    if (showChrome || showMap) {
       setShowFloatingToggle(true);
       return;
     }
@@ -633,10 +661,28 @@ function EditorCanvasComponent({
 
       window.removeEventListener("mousemove", resetFadeTimer);
     };
-  }, [isDesktopPointer, showChrome]);
+  }, [isDesktopPointer, showChrome, showMap]);
 
   return (
     <main className="editor-shell">
+      <button
+        className={`floating-toggle floating-map-toggle ${isMobileOS ? "mobile-os" : ""} ${
+          showMap ? "is-active" : ""
+        } ${
+          isDesktopPointer && !showFloatingToggle ? "inactive" : ""
+        }`}
+        type="button"
+        onClick={() => {
+          onSelectionToolbarChange(false);
+          onToggleMap();
+        }}
+        aria-label={showMap ? "Close map" : "Open map"}
+      >
+        <span className="floating-toggle-icon" aria-hidden="true">
+          <List size={18} />
+        </span>
+      </button>
+
       <button
         className={`floating-toggle ${isMobileOS ? "mobile-os" : ""} ${
           isDesktopPointer && !showFloatingToggle ? "inactive" : ""
@@ -661,6 +707,7 @@ function EditorCanvasComponent({
           onBlocksChange={onBlocksChange}
           onSelectionToolbarChange={onSelectionToolbarChange}
           onSelectionToolbarActiveChange={onSelectionToolbarActiveChange}
+          onActiveBlockChange={onActiveBlockChange}
         />
         <RichTextPlugin
           contentEditable={<ContentEditable className="paper-column editor-content" aria-label="Manuscript editor" />}

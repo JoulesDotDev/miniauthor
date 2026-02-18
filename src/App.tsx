@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ConflictModal } from "@/components/editor/ConflictModal";
 import { EditorCanvas } from "@/components/editor/EditorCanvas";
+import { MapPanel, type OutlineItem } from "@/components/editor/MapPanel";
 import { SelectionToolbar } from "@/components/editor/SelectionToolbar";
 import { SyncPanel } from "@/components/editor/SyncPanel";
 import { EditorChromeProvider } from "@/contexts/EditorChromeContext";
@@ -77,6 +78,31 @@ function detectMobileOSPlatform(): boolean {
   return isIos || isAndroid;
 }
 
+function stripHtmlText(value: string): string {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof document === "undefined") {
+    return value
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  const parser = document.createElement("div");
+  parser.innerHTML = value;
+  return (parser.textContent ?? "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+type OutlineEntry = OutlineItem & { index: number };
+type OutlineBlock = Block & { type: "title" | "heading1" | "heading2" };
+
 export function App() {
   const dropboxAppKey = import.meta.env.VITE_DROPBOX_APP_KEY as string | undefined;
   const dropboxRedirectUri =
@@ -86,14 +112,21 @@ export function App() {
   const [blocks, setBlocks] = useState<Block[]>([createBlock("title"), createBlock("paragraph")]);
   const [updatedAt, setUpdatedAt] = useState<number>(Date.now());
   const [showChrome, setShowChrome] = useState<boolean>(false);
+  const [showMap, setShowMap] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => getStoredTheme() ?? getSystemTheme());
   const [hasThemeOverride, setHasThemeOverride] = useState<boolean>(() => getStoredTheme() !== null);
 
   const isMac = useMemo(() => detectMacPlatform(), []);
   const isMobileOS = useMemo(() => detectMobileOSPlatform(), []);
   const toggleChrome = useCallback(() => {
+    setShowMap(false);
     setShowChrome((current) => !current);
+  }, []);
+  const toggleMap = useCallback(() => {
+    setShowChrome(false);
+    setShowMap((current) => !current);
   }, []);
   const toggleTheme = useCallback(() => {
     setHasThemeOverride(true);
@@ -115,7 +148,65 @@ export function App() {
     handleSelectionToolbarActiveChange,
     transformFocusedBlockType,
     applyInlineFormat,
+    jumpToBlockById,
   } = editor;
+
+  const outlineItems = useMemo<OutlineEntry[]>(
+    () =>
+      blocks
+        .map((block, index) => ({ block, index }))
+        .filter(
+          (entry): entry is { block: OutlineBlock; index: number } =>
+            entry.block.type === "title" ||
+            entry.block.type === "heading1" ||
+            entry.block.type === "heading2",
+        )
+        .map(({ block, index }) => {
+          const plainText = stripHtmlText(block.text);
+          const fallback =
+            block.type === "title"
+              ? "Title"
+              : block.type === "heading1"
+                ? "Heading 1"
+                : "Heading 2";
+
+          return {
+            id: block.id,
+            type: block.type,
+            label: plainText.length > 0 ? plainText : fallback,
+            index,
+          };
+        }),
+    [blocks],
+  );
+
+  const activeOutlineId = useMemo(() => {
+    if (outlineItems.length === 0) {
+      return null;
+    }
+
+    if (!activeBlockId) {
+      return outlineItems[0].id;
+    }
+
+    const activeIndex = blocks.findIndex((block) => block.id === activeBlockId);
+
+    if (activeIndex < 0) {
+      return outlineItems[0].id;
+    }
+
+    let resolvedId = outlineItems[0].id;
+
+    for (const item of outlineItems) {
+      if (item.index > activeIndex) {
+        break;
+      }
+
+      resolvedId = item.id;
+    }
+
+    return resolvedId;
+  }, [activeBlockId, blocks, outlineItems]);
 
   const {
     lastSyncedAt,
@@ -234,6 +325,7 @@ export function App() {
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
     handleSelectionToolbarChange(false);
+    setShowMap(false);
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
@@ -258,6 +350,15 @@ export function App() {
           }
         }}
       >
+        <MapPanel
+          open={showMap && !isConflictOpen}
+          items={outlineItems}
+          activeItemId={activeOutlineId}
+          onJump={(blockId) => {
+            jumpToBlockById(blockId);
+          }}
+        />
+
         <SelectionToolbar
           visible={showSelectionToolbar && !isConflictOpen}
           active={selectionToolbarActive}
@@ -274,6 +375,11 @@ export function App() {
           onBlocksChange={handleEditorBlocksChange}
           onSelectionToolbarChange={handleSelectionToolbarChange}
           onSelectionToolbarActiveChange={handleSelectionToolbarActiveChange}
+          onActiveBlockChange={(nextBlockId) => {
+            setActiveBlockId((current) => (current === nextBlockId ? current : nextBlockId));
+          }}
+          showMap={showMap}
+          onToggleMap={toggleMap}
         />
 
         <SyncPanel

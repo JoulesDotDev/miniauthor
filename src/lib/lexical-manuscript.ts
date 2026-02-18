@@ -496,6 +496,20 @@ export function selectTopLevelBlockContentByKey(blockKey: string): boolean {
   return true;
 }
 
+export function selectTopLevelBlockStartByKey(blockKey: string): boolean {
+  const root = $getRoot();
+  const target = root.getChildren().find(
+    (node): node is ElementNode => $isElementNode(node) && node.getKey() === blockKey,
+  );
+
+  if (!target) {
+    return false;
+  }
+
+  target.selectStart();
+  return true;
+}
+
 export function markdownFromBlocksForCompare(blocks: Block[]): string {
   return serializeBlocksToMarkdown(normalizeBlocksForEditor(blocks));
 }

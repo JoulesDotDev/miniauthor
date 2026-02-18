@@ -7,6 +7,7 @@ import type { Block } from "@/lib/editor-types";
 import {
   markdownFromBlocksForCompare,
   selectCurrentTopLevelBlockContent,
+  selectTopLevelBlockStartByKey,
   selectionTouchesTitleBlock,
   setSelectedTopLevelBlocksToType,
 } from "@/lib/lexical-manuscript";
@@ -47,6 +48,7 @@ interface UseManuscriptEditorResult {
   transformFocusedBlockType: (type: "heading1" | "heading2" | "paragraph") => void;
   applyInlineFormat: (command: "bold" | "italic") => void;
   selectFocusedBlockContent: () => void;
+  jumpToBlockById: (blockId: string) => void;
 }
 
 export function useManuscriptEditor({
@@ -151,6 +153,27 @@ export function useManuscriptEditor({
     selectCurrentTopLevelBlockContent(editor);
   }, []);
 
+  const jumpToBlockById = useCallback((blockId: string) => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    editor.update(() => {
+      selectTopLevelBlockStartByKey(blockId);
+    });
+
+    window.requestAnimationFrame(() => {
+      const element = editor.getElementByKey(blockId);
+
+      element?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    });
+  }, []);
+
   useEffect(() => {
     markdownRef.current = markdownFromBlocksForCompare(blocks);
   }, [blocks]);
@@ -196,5 +219,6 @@ export function useManuscriptEditor({
     transformFocusedBlockType,
     applyInlineFormat,
     selectFocusedBlockContent,
+    jumpToBlockById,
   };
 }
