@@ -14,6 +14,36 @@ importers:
       '@fontsource-variable/outfit':
         specifier: ^5.2.8
         version: 5.2.8
+      '@fontsource/bree-serif':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/cormorant-garamond':
+        specifier: ^5.2.11
+        version: 5.2.11
+      '@fontsource/domine':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/eb-garamond':
+        specifier: ^5.2.7
+        version: 5.2.7
+      '@fontsource/lexend-deca':
+        specifier: ^5.2.10
+        version: 5.2.10
+      '@fontsource/libre-baskerville':
+        specifier: ^5.2.10
+        version: 5.2.10
+      '@fontsource/merriweather':
+        specifier: ^5.2.11
+        version: 5.2.11
+      '@fontsource/pt-serif':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/roboto-serif':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/special-elite':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@lexical/react':
         specifier: ^0.40.0
         version: 0.40.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(yjs@13.6.29)
@@ -496,6 +526,36 @@ packages:
 
   '@fontsource-variable/outfit@5.2.8':
     resolution: {integrity: sha512-4oUDCZx/Tcz6HZP423w/niqEH31Gks5IsqHV2ZZz1qKHaVIZdj2f0/S1IK2n8jl6Xo0o3N+3RjNHlV9R73ozQA==}
+
+  '@fontsource/bree-serif@5.2.8':
+    resolution: {integrity: sha512-bf1wIMsF3ex8n6k8pQ7WU7qGF8LS/kfTLCUuCQoW3r7JZLhgy1qp3PF3ld45FNJYKM3bOPrrkyLPfl5hmbQANQ==}
+
+  '@fontsource/cormorant-garamond@5.2.11':
+    resolution: {integrity: sha512-5JjpN023lhA5soijgVT0BdRGzmlijm402ppjccMd6h+vRE0mX2lJnE+41UPfnlidrkV9/rCo1mf58WZlHnB0CA==}
+
+  '@fontsource/domine@5.2.8':
+    resolution: {integrity: sha512-sXSyFCJpQdEyanqBqGV6RnQSVneI5xXnXgSm54vSjTOSbaHpvU1Nv9iR7vWY/sESO3JPJJudMRUpJa8ZQOBuPA==}
+
+  '@fontsource/eb-garamond@5.2.7':
+    resolution: {integrity: sha512-V42tTlHDbnDo0+lENnXKWMx63Llq6Gfl2l7ozkoeRQN60S0jm6hEgCLlOT/5YyKAN9QZ0e2ofpy0rGKlz9jBrw==}
+
+  '@fontsource/lexend-deca@5.2.10':
+    resolution: {integrity: sha512-8xa0J/pjM4ZbwEJva35UoymspFZyRBgL3M62SyDu47RSmYqE7NB73TlNLrZ9U2mFbcFoqKiXxV+ExNS/+ZtmYA==}
+
+  '@fontsource/libre-baskerville@5.2.10':
+    resolution: {integrity: sha512-Y/bGj4cOdWhAxU4+sBPen3MB5Og3t/WvezVL+05CJ7cvhDQUKpQFUuw/hm1IQKRc9u0lWs8VP2MKDOK2uQtloQ==}
+
+  '@fontsource/merriweather@5.2.11':
+    resolution: {integrity: sha512-ZiIMeUh5iT8d73o6xlSF8GKgjV5pgiFrufYc5jZTVAfExtWKqM2vQHnsqXSFMv4ELhAcjt6Vf+5T3oVGXhAizQ==}
+
+  '@fontsource/pt-serif@5.2.8':
+    resolution: {integrity: sha512-iqzFEfZOI1DOIhHEFAvU6vvbd6UGb3yVnGpZc63YIaa64/sRF8Fo0BHB6HB3/mJuVI/7Mq4AV+WQCBCY4c3d3w==}
+
+  '@fontsource/roboto-serif@5.2.8':
+    resolution: {integrity: sha512-FIk0AkvOglGXWz3kDhr+rTqW1gSmpY5W5ZzuqYt1ATBRQDfF3sRz4ZyqqY3EmsTeiO7ySU6gclUPh1cGAmUuhg==}
+
+  '@fontsource/special-elite@5.2.8':
+    resolution: {integrity: sha512-tJRYZ6dZK3wiGvMS5NMOg6fqctWimNUUrYtLfPGJYqidaFeI2QqFUE0rbn16DjqID0DrnZSHYfqz1jGdctd5ew==}
 
   '@hono/node-server@1.19.9':
     resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
@@ -3017,6 +3077,26 @@ snapshots:
   '@floating-ui/utils@0.2.10': {}
 
   '@fontsource-variable/outfit@5.2.8': {}
+
+  '@fontsource/bree-serif@5.2.8': {}
+
+  '@fontsource/cormorant-garamond@5.2.11': {}
+
+  '@fontsource/domine@5.2.8': {}
+
+  '@fontsource/eb-garamond@5.2.7': {}
+
+  '@fontsource/lexend-deca@5.2.10': {}
+
+  '@fontsource/libre-baskerville@5.2.10': {}
+
+  '@fontsource/merriweather@5.2.11': {}
+
+  '@fontsource/pt-serif@5.2.8': {}
+
+  '@fontsource/roboto-serif@5.2.8': {}
+
+  '@fontsource/special-elite@5.2.8': {}
 
   '@hono/node-server@1.19.9(hono@4.11.9)':
     dependencies:

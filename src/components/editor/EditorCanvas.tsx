@@ -38,8 +38,12 @@ function placeholderForType(type: Block["type"]): string {
     return "Title";
   }
 
-  if (type === "heading") {
-    return "Section headline";
+  if (type === "heading1") {
+    return "Heading 1";
+  }
+
+  if (type === "heading2") {
+    return "Heading 2";
   }
 
   return "Start writting...";
@@ -62,11 +66,18 @@ function decorateEditorBlocks(editor: LexicalEditor): void {
       }
 
       const type: Block["type"] =
-        index === 0 ? "title" : $isHeadingNode(node) ? "heading" : "paragraph";
+        index === 0
+          ? "title"
+          : $isHeadingNode(node)
+            ? node.getTag() === "h3"
+              ? "heading2"
+              : "heading1"
+            : "paragraph";
       const isEmpty = isLexicalElementEmpty(node);
       const showPlaceholder =
         type === "title" ||
-        type === "heading" ||
+        type === "heading1" ||
+        type === "heading2" ||
         (type === "paragraph" && hasSingleStarterParagraph && index === 1);
 
       element.dataset.blockId = node.getKey();
@@ -83,7 +94,7 @@ function decorateEditorBlocks(editor: LexicalEditor): void {
         delete element.dataset.placeholder;
       }
 
-      if (type === "heading") {
+      if (type === "heading1") {
         element.dataset.pageStart = "true";
       } else {
         delete element.dataset.pageStart;
@@ -200,10 +211,20 @@ function ManuscriptBehaviorPlugin({ onBlocksChange, onSelectionToolbarChange }: 
           return true;
         }
 
-        if (key === "1" || key === "2") {
+        if (key === "1" || key === "2" || key === "3") {
           event.preventDefault();
           editor.update(() => {
-            setSelectedTopLevelBlocksToType(key === "1" ? "heading" : "paragraph");
+            if (key === "1") {
+              setSelectedTopLevelBlocksToType("heading1");
+              return;
+            }
+
+            if (key === "2") {
+              setSelectedTopLevelBlocksToType("heading2");
+              return;
+            }
+
+            setSelectedTopLevelBlocksToType("paragraph");
           });
           return true;
         }
@@ -325,11 +346,11 @@ function EditorCanvasComponent({
       theme: {
         heading: {
           h1: "editor-block block-title",
-          h2: "editor-block block-heading",
-          h3: "editor-block block-heading",
-          h4: "editor-block block-heading",
-          h5: "editor-block block-heading",
-          h6: "editor-block block-heading",
+          h2: "editor-block block-heading-1",
+          h3: "editor-block block-heading-2",
+          h4: "editor-block block-heading-2",
+          h5: "editor-block block-heading-2",
+          h6: "editor-block block-heading-2",
         },
         paragraph: "editor-block block-paragraph",
         text: {

@@ -170,7 +170,8 @@ export function App() {
           visible={showSelectionToolbar}
           onBold={() => applyInlineFormat("bold")}
           onItalic={() => applyInlineFormat("italic")}
-          onHeading={() => transformFocusedBlockType("heading")}
+          onHeading1={() => transformFocusedBlockType("heading1")}
+          onHeading2={() => transformFocusedBlockType("heading2")}
           onParagraph={() => transformFocusedBlockType("paragraph")}
         />
 

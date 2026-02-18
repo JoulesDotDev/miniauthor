@@ -26,7 +26,7 @@ interface UseManuscriptEditorResult {
   setLexicalEditor: (editor: LexicalEditor | null) => void;
   handleEditorBlocksChange: (nextBlocks: Block[]) => void;
   handleSelectionToolbarChange: (visible: boolean) => void;
-  transformFocusedBlockType: (type: "heading" | "paragraph") => void;
+  transformFocusedBlockType: (type: "heading1" | "heading2" | "paragraph") => void;
   applyInlineFormat: (command: "bold" | "italic") => void;
   selectFocusedBlockContent: () => void;
 }
@@ -43,7 +43,7 @@ export function useManuscriptEditor({
   const markdownRef = useRef<string>(markdownFromBlocksForCompare(blocks));
 
   const headingCount = useMemo(
-    () => blocks.reduce((count, block) => (block.type === "heading" ? count + 1 : count), 0),
+    () => blocks.reduce((count, block) => (block.type === "heading1" ? count + 1 : count), 0),
     [blocks],
   );
   const totalPages = useMemo(() => Math.max(1, headingCount + 1), [headingCount]);
@@ -92,7 +92,7 @@ export function useManuscriptEditor({
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, command);
   }, []);
 
-  const transformFocusedBlockType = useCallback((type: "heading" | "paragraph") => {
+  const transformFocusedBlockType = useCallback((type: "heading1" | "heading2" | "paragraph") => {
     const editor = editorRef.current;
 
     if (!editor) {

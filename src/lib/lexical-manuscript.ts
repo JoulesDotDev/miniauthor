@@ -38,7 +38,7 @@ function resolveTopLevelBlockType(node: LexicalNode, index: number): Block["type
   }
 
   if ($isHeadingNode(node)) {
-    return "heading";
+    return node.getTag() === "h3" ? "heading2" : "heading1";
   }
 
   return "paragraph";
@@ -156,19 +156,27 @@ function topLevelNodeForBlockType(type: Block["type"]): ElementNode {
     return $createHeadingNode("h1");
   }
 
-  if (type === "heading") {
+  if (type === "heading1") {
     return $createHeadingNode("h2");
+  }
+
+  if (type === "heading2") {
+    return $createHeadingNode("h3");
   }
 
   return $createParagraphNode();
 }
 
-function blockTypeForHeadingTag(index: number): Block["type"] {
+function blockTypeForHeadingTag(node: ElementNode, index: number): Block["type"] {
   if (index === 0) {
     return "title";
   }
 
-  return "heading";
+  if ($isHeadingNode(node) && node.getTag() === "h3") {
+    return "heading2";
+  }
+
+  return "heading1";
 }
 
 export function readBlocksFromLexicalRoot(): Block[] {
@@ -182,7 +190,7 @@ export function readBlocksFromLexicalRoot(): Block[] {
 
     let type: Block["type"];
     if ($isHeadingNode(node)) {
-      type = blockTypeForHeadingTag(index);
+      type = blockTypeForHeadingTag(node, index);
     } else {
       type = resolveTopLevelBlockType(node, index);
     }
@@ -219,12 +227,14 @@ export function writeBlocksToLexicalRoot(inputBlocks: Block[]): void {
   ensureLexicalManuscriptStructure();
 }
 
-function convertElementNodeType(node: ElementNode, type: "title" | "heading" | "paragraph"): ElementNode {
+function convertElementNodeType(node: ElementNode, type: "title" | "heading1" | "heading2" | "paragraph"): ElementNode {
   const replacement =
     type === "title"
       ? $createHeadingNode("h1")
-      : type === "heading"
+      : type === "heading1"
         ? $createHeadingNode("h2")
+        : type === "heading2"
+          ? $createHeadingNode("h3")
         : $createParagraphNode();
 
   replacement.append(...node.getChildren());
@@ -295,7 +305,7 @@ export function ensureLexicalManuscriptStructure(): void {
     }
 
     if ($isHeadingNode(current) && current.getTag() === "h1") {
-      convertElementNodeType(current, "heading");
+      convertElementNodeType(current, "heading1");
     }
   }
 
@@ -331,7 +341,7 @@ function topLevelSelectionNodes(): ElementNode[] {
   return Array.from(selected.values());
 }
 
-export function setSelectedTopLevelBlocksToType(type: "heading" | "paragraph"): void {
+export function setSelectedTopLevelBlocksToType(type: "heading1" | "heading2" | "paragraph"): void {
   const root = $getRoot();
   const first = root.getFirstChild();
   const topNodes = topLevelSelectionNodes();
@@ -341,12 +351,21 @@ export function setSelectedTopLevelBlocksToType(type: "heading" | "paragraph"): 
       return;
     }
 
-    if (type === "heading") {
+    if (type === "heading1") {
       if ($isHeadingNode(node) && node.getTag() === "h2") {
         return;
       }
 
-      convertElementNodeType(node, "heading");
+      convertElementNodeType(node, "heading1");
+      return;
+    }
+
+    if (type === "heading2") {
+      if ($isHeadingNode(node) && node.getTag() === "h3") {
+        return;
+      }
+
+      convertElementNodeType(node, "heading2");
       return;
     }
 

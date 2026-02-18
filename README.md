@@ -5,14 +5,14 @@ Minimal, distraction-free writing app for long-form manuscripts.
 ## What It Does
 
 - One endless A4-like writing strip
-- Block-by-block markdown editing (`title`, `heading`, `paragraph`)
+- Block-by-block markdown editing (`title`, `heading1`, `heading2`, `paragraph`)
 - Hidden UI by default; toggle controls with `Alt/Option`
 - Left panel shortcut reference, right panel sync/export
 - Top-center page counter (`current/total`) visible only when controls are shown
 - Offline-first persistence with IndexedDB
 - Dropbox OAuth + file sync (app-folder CRUD)
 - Auto 3-way merge on reconnect, with conflict diff fallback
-- Split export by section headline boundaries into multiple markdown files
+- Split export by Heading 1 boundaries into multiple markdown files
 - Service worker cache for offline app shell
 
 ## Run
@@ -50,7 +50,8 @@ If `VITE_DROPBOX_REDIRECT_URI` is omitted, the app uses the current page URL.
 - On sync/reconnect, app reads/writes one Dropbox file:
   - `manuscript.md`
 - A single main headline (`#`) is always kept as the first block.
-- Section headlines (`##`) are treated as automatic page starts for page counting and split export.
+- Heading 1 blocks (`##`) are treated as automatic page starts for page counting and split export.
+- Heading 2 blocks (`###`) stay within the current page.
 - Merge strategy:
   - clean non-overlapping changes auto-merge
   - overlapping edits open side-by-side diff resolver
@@ -62,8 +63,9 @@ If `VITE_DROPBOX_REDIRECT_URI` is omitted, the app uses the current page URL.
 - `Cmd/Ctrl + S`: Sync now
 - `Cmd/Ctrl + B`: Toggle bold formatting
 - `Cmd/Ctrl + I`: Toggle italic formatting
-- `Cmd/Ctrl + 1`: Section headline block
-- `Cmd/Ctrl + 2`: Paragraph block
+- `Cmd/Ctrl + 1`: Heading 1 block
+- `Cmd/Ctrl + 2`: Heading 2 block
+- `Cmd/Ctrl + 3`: Paragraph block
 - `Cmd/Ctrl + A`: Select current block content
 - `Enter`: New paragraph block
 

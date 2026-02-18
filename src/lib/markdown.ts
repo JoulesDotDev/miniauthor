@@ -113,17 +113,27 @@ export function normalizeBlocksForEditor(blocks: Block[]): Block[] {
 
   for (const block of blocks as Array<{ id?: string; type?: string; text?: string }>) {
     const rawType = block.type;
+    let nextType: BlockType | null = null;
 
-    if (rawType !== "title" && rawType !== "heading" && rawType !== "paragraph") {
+    if (
+      rawType === "title" ||
+      rawType === "heading1" ||
+      rawType === "heading2" ||
+      rawType === "paragraph"
+    ) {
+      nextType = rawType;
+    } else if (rawType === "heading") {
+      // Backward compatibility with early development snapshots.
+      nextType = "heading1";
+      changed = true;
+    } else {
       changed = true;
       continue;
     }
 
-    let nextType: BlockType = rawType;
-
-    if (rawType === "title") {
+    if (nextType === "title") {
       if (titleSeen) {
-        nextType = "heading";
+        nextType = "heading1";
         changed = true;
       } else {
         titleSeen = true;
@@ -177,8 +187,12 @@ function serializeBlocks(blocks: Block[], ensureSingleTitle: boolean): string {
       return `# ${markdownInline}`.trim();
     }
 
-    if (block.type === "heading") {
+    if (block.type === "heading1") {
       return `## ${markdownInline}`.trim();
+    }
+
+    if (block.type === "heading2") {
+      return `### ${markdownInline}`.trim();
     }
 
     return markdownInline;
@@ -212,14 +226,19 @@ export function parseMarkdownToBlocks(markdown: string): Block[] {
         blocks.push(createBlock("title", titleText));
         titleSeen = true;
       } else {
-        blocks.push(createBlock("heading", titleText));
+        blocks.push(createBlock("heading1", titleText));
       }
 
       continue;
     }
 
+    if (trimmed.startsWith("### ")) {
+      blocks.push(createBlock("heading2", normalizeInlineMarkdown(trimmed.slice(4).trim())));
+      continue;
+    }
+
     if (trimmed.startsWith("## ")) {
-      blocks.push(createBlock("heading", normalizeInlineMarkdown(trimmed.slice(3).trim())));
+      blocks.push(createBlock("heading1", normalizeInlineMarkdown(trimmed.slice(3).trim())));
       continue;
     }
 
@@ -239,7 +258,7 @@ export function splitBlocksToMarkdownPages(blocks: Block[]): string[] {
   let currentPage: Block[] = [];
 
   for (const block of normalized) {
-    if (block.type === "heading" && currentPage.length > 0) {
+    if (block.type === "heading1" && currentPage.length > 0) {
       pages.push(serializeBlocks(currentPage, false));
       currentPage = [];
     }
