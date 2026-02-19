@@ -592,13 +592,14 @@ function ManuscriptBehaviorPlugin({
       COMMAND_PRIORITY_CRITICAL,
     );
 
-    const unregisterUpdates = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
+    const unregisterUpdates = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
       let needsFix = false;
       let hasSelectionText = false;
       let selectionIncludesTitle = false;
       let nextSelectionToolbarActiveState = EMPTY_SELECTION_TOOLBAR_ACTIVE_STATE;
       const hasStructureMutation = dirtyElements.size > 0;
       const hasDocumentMutation = hasStructureMutation || dirtyLeaves.size > 0;
+      const isExternalSyncUpdate = tags.has("external-sync");
       let nextBlocks: Block[] = [];
       let activeBlockKey: string | null = null;
 
@@ -672,7 +673,9 @@ function ManuscriptBehaviorPlugin({
         }
 
         onBlocksChange(nextBlocks);
-        scheduleComfortScroll();
+        if (!isExternalSyncUpdate) {
+          scheduleComfortScroll();
+        }
       }
     });
 

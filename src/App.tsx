@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Save } from "lucide-react";
 
 import { ConflictModal } from "@/components/editor/ConflictModal";
@@ -14,7 +14,7 @@ import { createBlock, serializeBlocksToMarkdown, splitBlocksToMarkdownPages } fr
 
 const THEME_STORAGE_KEY = "book-writer-theme";
 const APP_NAME = "Mini Author .app";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const MIN_SYNC_FEEDBACK_MS = 500;
 
 function getStoredTheme(): "light" | "dark" | null {
@@ -45,16 +45,63 @@ function formatTime(timestamp: number | null): string {
   }).format(timestamp);
 }
 
-function downloadTextFile(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+function detectIosLikePlatform(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent ?? "";
+  const platform = navigator.platform ?? "";
+
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    return true;
+  }
+
+  // iPadOS can present itself as Mac with touch.
+  return /Mac/i.test(platform) && navigator.maxTouchPoints > 1;
+}
+
+async function downloadTextFile(filename: string, content: string): Promise<void> {
+  const mimeType = "text/markdown;charset=utf-8";
+  const blob = new Blob([content], { type: mimeType });
+  const isIosLike = detectIosLikePlatform();
+
+  if (isIosLike && typeof navigator.share === "function") {
+    try {
+      const file = new File([blob], filename, { type: mimeType });
+      const shareData: ShareData = {
+        files: [file],
+        title: filename,
+      };
+
+      if (typeof navigator.canShare === "function" && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
   link.href = url;
   link.download = filename;
+  if (isIosLike) {
+    // Avoid replacing current PWA navigation entry with blob: URLs on iOS.
+    link.target = "_blank";
+    link.rel = "noopener";
+  }
+  document.body.appendChild(link);
   link.click();
 
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    link.remove();
+  }, 3000);
 }
 
 function toDownloadSafeBaseName(value: string): string {
@@ -365,6 +412,21 @@ export function App() {
     };
   }, [handleSelectionToolbarChange, isConflictOpen]);
 
+  useLayoutEffect(() => {
+    if (!activeFileId) {
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const editorShell = document.querySelector<HTMLElement>(".editor-shell");
+    if (editorShell) {
+      editorShell.scrollTop = 0;
+    }
+  }, [activeFileId]);
+
   useEffect(() => {
     let hideTimer: number | null = null;
 
@@ -498,14 +560,14 @@ export function App() {
           }}
           onExportMarkdown={() => {
             const filenameBase = toDownloadSafeBaseName(activeFileName);
-            downloadTextFile(`${filenameBase}.md`, serializeBlocksToMarkdown(blocks));
+            void downloadTextFile(`${filenameBase}.md`, serializeBlocksToMarkdown(blocks));
           }}
           onExportSplitPages={() => {
             const filenameBase = toDownloadSafeBaseName(activeFileName);
             const pages = splitBlocksToMarkdownPages(blocks);
 
             pages.forEach((page, index) => {
-              downloadTextFile(`${filenameBase}-page-${index + 1}.md`, page);
+              void downloadTextFile(`${filenameBase}-page-${index + 1}.md`, page);
             });
           }}
           onSelectFile={(fileId) => {
