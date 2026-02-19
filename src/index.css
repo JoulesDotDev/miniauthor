@@ -1477,7 +1477,7 @@ textarea {
 
   .menu-brand-chip {
     top: auto;
-    bottom: max(10px, env(safe-area-inset-bottom));
+    bottom: max(35px, env(safe-area-inset-bottom) + 25px);
     left: 10px;
   }
 
@@ -1488,13 +1488,13 @@ textarea {
 
   .floating-toggle.mobile-os {
     right: 14px;
-    bottom: 14px;
+    bottom: 26px;
     width: 48px;
     height: 48px;
   }
 
   .floating-map-toggle.mobile-os {
-    bottom: 70px;
+    bottom: 86px;
   }
 
   .panel-left {
