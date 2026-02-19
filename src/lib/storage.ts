@@ -1,10 +1,17 @@
-import type { DropboxTokenState, StoredDocument } from "@/lib/editor-types";
+import type {
+  DropboxTokenState,
+  StoredDocument,
+  StoredWorkspace,
+} from "@/lib/editor-types";
 
 const DB_NAME = "book-writer-db";
 const DB_VERSION = 1;
 const STORE_NAME = "kv";
-const DOCUMENT_KEY = "manuscript";
+
+const WORKSPACE_KEY = "workspace-index";
 const TOKEN_KEY = "dropbox-token";
+const LEGACY_DOCUMENT_KEY = "manuscript";
+const DOCUMENT_KEY_PREFIX = "manuscript-doc:";
 
 interface KvRecord<T> {
   key: string;
@@ -12,6 +19,10 @@ interface KvRecord<T> {
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+function documentKey(id: string): string {
+  return `${DOCUMENT_KEY_PREFIX}${id}`;
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   if (dbPromise) {
@@ -67,12 +78,24 @@ async function writeValue<T>(key: string, value: T): Promise<void> {
   });
 }
 
-export function getStoredDocument(): Promise<StoredDocument | null> {
-  return readValue<StoredDocument>(DOCUMENT_KEY);
+export function getStoredWorkspace(): Promise<StoredWorkspace | null> {
+  return readValue<StoredWorkspace>(WORKSPACE_KEY);
+}
+
+export function setStoredWorkspace(workspace: StoredWorkspace): Promise<void> {
+  return writeValue(WORKSPACE_KEY, workspace);
+}
+
+export function getStoredDocument(id: string): Promise<StoredDocument | null> {
+  return readValue<StoredDocument>(documentKey(id));
 }
 
 export function setStoredDocument(doc: StoredDocument): Promise<void> {
-  return writeValue(DOCUMENT_KEY, doc);
+  return writeValue(documentKey(doc.id), doc);
+}
+
+export function getLegacyStoredDocument(): Promise<StoredDocument | null> {
+  return readValue<StoredDocument>(LEGACY_DOCUMENT_KEY);
 }
 
 export function getStoredDropboxToken(): Promise<DropboxTokenState | null> {

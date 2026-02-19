@@ -16,6 +16,12 @@ export interface DropboxUploadResult {
   rev: string;
 }
 
+export interface DropboxFileMetadata {
+  id: string | null;
+  rev: string | null;
+  serverModifiedAt: number | null;
+}
+
 function removeOauthParamsFromUrl(): void {
   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
   window.history.replaceState({}, document.title, cleanUrl);
@@ -265,5 +271,45 @@ export async function dropboxUploadFile(
 
   return {
     rev: payload.rev,
+  };
+}
+
+export async function dropboxGetFileMetadata(
+  token: string,
+  path: string,
+): Promise<DropboxFileMetadata | null> {
+  const response = await fetch("https://api.dropboxapi.com/2/files/get_metadata", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      path,
+      include_deleted: false,
+    }),
+  });
+
+  if (response.status === 409) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Dropbox metadata failed: ${detail}`);
+  }
+
+  const payload = (await response.json()) as {
+    id?: string;
+    rev?: string;
+    server_modified?: string;
+  };
+
+  return {
+    id: payload.id ?? null,
+    rev: payload.rev ?? null,
+    serverModifiedAt: payload.server_modified
+      ? Date.parse(payload.server_modified)
+      : null,
   };
 }

@@ -57,6 +57,18 @@ function downloadTextFile(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
+function toDownloadSafeBaseName(value: string): string {
+  const cleaned = value
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+
+  return cleaned.length > 0 ? cleaned : "manuscript";
+}
+
 function detectMacPlatform(): boolean {
   if (typeof navigator === "undefined") {
     return false;
@@ -216,16 +228,25 @@ export function App() {
   }, [activeBlockId, blocks, outlineItems]);
 
   const {
+    files,
+    activeFileId,
+    activeFileName,
+    activeFileCloudAheadAt,
     lastSyncedAt,
     syncNotice,
     isSyncing,
+    isPulling,
     dropboxToken,
     conflict,
     setConflict,
     syncWithDropbox,
+    pullFileCatalog,
     connectDropbox,
     disconnectDropbox,
     resolveConflict,
+    selectFile,
+    createFile,
+    renameActiveFile,
   } = useDropboxSync({
     blocks,
     setBlocks,
@@ -430,6 +451,7 @@ export function App() {
 
         <EditorCanvas
           blocks={blocks}
+          isSyncing={isSyncing}
           onEditorReady={setLexicalEditor}
           onBlocksChange={handleEditorBlocksChange}
           onSelectionToolbarChange={handleSelectionToolbarChange}
@@ -442,9 +464,19 @@ export function App() {
         />
 
         <SyncPanel
+          files={files}
+          activeFileId={activeFileId}
+          activeFileName={activeFileName}
+          cloudAheadSyncHint={
+            activeFileCloudAheadAt
+              ? `Dropbox has newer changes from ${formatTime(activeFileCloudAheadAt)}.`
+              : null
+          }
           syncNotice={syncNotice}
           isConnected={Boolean(dropboxToken)}
           isSyncing={isSyncing}
+          isPulling={isPulling}
+          isConflictOpen={isConflictOpen}
           hasDropboxAppKey={Boolean(dropboxAppKey)}
           hideShortcuts={isMobileOS}
           theme={theme}
@@ -459,16 +491,26 @@ export function App() {
           onSync={() => {
             void syncWithDropbox();
           }}
+          onPullFiles={() => {
+            void pullFileCatalog();
+          }}
           onExportMarkdown={() => {
-            downloadTextFile("manuscript.md", serializeBlocksToMarkdown(blocks));
+            const filenameBase = toDownloadSafeBaseName(activeFileName);
+            downloadTextFile(`${filenameBase}.md`, serializeBlocksToMarkdown(blocks));
           }}
           onExportSplitPages={() => {
+            const filenameBase = toDownloadSafeBaseName(activeFileName);
             const pages = splitBlocksToMarkdownPages(blocks);
 
             pages.forEach((page, index) => {
-              downloadTextFile(`manuscript-page-${index + 1}.md`, page);
+              downloadTextFile(`${filenameBase}-page-${index + 1}.md`, page);
             });
           }}
+          onSelectFile={(fileId) => {
+            void selectFile(fileId);
+          }}
+          onCreateFile={createFile}
+          onRenameActiveFile={renameActiveFile}
         />
 
         <ConflictModal

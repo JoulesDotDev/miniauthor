@@ -563,6 +563,120 @@ textarea {
   margin-top: 14px;
 }
 
+.sync-cloud-ahead-hint {
+  margin: 8px 2px 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.file-picker-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.file-picker-secondary-row {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.file-picker-select-wrap {
+  min-width: 0;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  padding: 0 10px;
+}
+
+.file-picker-select-wrap svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.file-picker-select {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.file-picker-select:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.file-picker-icon-button {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.file-picker-icon-button:hover {
+  border-color: var(--hover-paper-border);
+  background: var(--hover-paper);
+}
+
+.file-picker-icon-button:active {
+  background: var(--hover-paper-pressed);
+}
+
+.file-picker-icon-button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.file-picker-secondary-button {
+  width: 100%;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.file-picker-secondary-button:hover {
+  border-color: var(--hover-paper-border);
+  background: var(--hover-paper);
+}
+
+.file-picker-secondary-button:active {
+  background: var(--hover-paper-pressed);
+}
+
+.file-picker-secondary-button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .export-actions {
   margin-top: 8px;
 }
@@ -654,6 +768,87 @@ textarea {
 
 .warning-box {
   margin-top: 12px;
+}
+
+.file-name-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  padding: 18px;
+  background: var(--overlay);
+  display: grid;
+  place-items: center;
+}
+
+.file-name-modal {
+  width: min(100%, 420px);
+  border: 1px solid var(--line-subtle);
+  border-radius: 16px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  padding: 16px;
+}
+
+.file-name-modal h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.file-name-modal p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.file-name-input {
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+}
+
+.file-name-input:focus {
+  border-color: var(--accent);
+}
+
+.file-name-modal-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.file-name-modal-actions button {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-subtle);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.file-name-modal-actions button:hover {
+  border-color: var(--hover-paper-border);
+  background: var(--hover-paper);
+}
+
+.file-name-modal-actions button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
 }
 
 .button-row button {
@@ -1324,5 +1519,14 @@ textarea {
 
   .conflict-footer-actions {
     grid-template-columns: 1fr;
+  }
+
+  .file-name-modal-overlay {
+    padding: 12px;
+  }
+
+  .file-name-modal {
+    width: 100%;
+    border-radius: 14px;
   }
 }

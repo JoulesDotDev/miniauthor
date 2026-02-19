@@ -30,6 +30,7 @@ import {
 
 interface EditorCanvasProps {
   blocks: Block[];
+  isSyncing: boolean;
   onEditorReady: (editor: LexicalEditor | null) => void;
   onBlocksChange: (nextBlocks: Block[]) => void;
   onSelectionToolbarChange: (visible: boolean) => void;
@@ -364,6 +365,16 @@ function EditorReadyPlugin({ onEditorReady }: { onEditorReady: (editor: LexicalE
   return null;
 }
 
+function EditableStatePlugin({ isSyncing }: { isSyncing: boolean }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    editor.setEditable(!isSyncing);
+  }, [editor, isSyncing]);
+
+  return null;
+}
+
 function ExternalBlocksSyncPlugin({
   blocks,
   editorBlocksRef,
@@ -687,6 +698,7 @@ function ManuscriptBehaviorPlugin({
 
 function EditorCanvasComponent({
   blocks,
+  isSyncing,
   onEditorReady,
   onBlocksChange,
   onSelectionToolbarChange,
@@ -836,6 +848,7 @@ function EditorCanvasComponent({
       </button>
 
       <LexicalComposer initialConfig={initialConfig}>
+        <EditableStatePlugin isSyncing={isSyncing} />
         <EditorReadyPlugin onEditorReady={onEditorReady} />
         <ExternalBlocksSyncPlugin blocks={blocks} editorBlocksRef={lastEditorBlocksRef} />
         <ManuscriptBehaviorPlugin
