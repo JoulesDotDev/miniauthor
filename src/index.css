@@ -956,6 +956,25 @@ textarea {
   animation: button-spin 0.9s linear infinite;
 }
 
+@media (hover: none) {
+  .button-row button:hover,
+  .file-name-modal-actions button:hover,
+  .file-name-modal-actions button.danger:hover,
+  .file-picker-icon-button:hover,
+  .file-picker-secondary-button:hover,
+  .file-picker-danger-button:hover,
+  .floating-toggle:hover,
+  .map-tree-item:hover,
+  .selection-toolbar button:hover,
+  .conflict-actions-row button:hover,
+  .conflict-hunk-actions button:hover,
+  .conflict-hunk-preview-controls button:hover,
+  .conflict-footer-actions .conflict-close-button:hover {
+    border-color: inherit;
+    background: inherit;
+  }
+}
+
 @keyframes button-spin {
   from {
     transform: rotate(0deg);
