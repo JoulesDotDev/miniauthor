@@ -78,6 +78,20 @@ async function writeValue<T>(key: string, value: T): Promise<void> {
   });
 }
 
+async function deleteValue(key: string): Promise<void> {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    store.delete(key);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export function getStoredWorkspace(): Promise<StoredWorkspace | null> {
   return readValue<StoredWorkspace>(WORKSPACE_KEY);
 }
@@ -92,6 +106,10 @@ export function getStoredDocument(id: string): Promise<StoredDocument | null> {
 
 export function setStoredDocument(doc: StoredDocument): Promise<void> {
   return writeValue(documentKey(doc.id), doc);
+}
+
+export function deleteStoredDocument(id: string): Promise<void> {
+  return deleteValue(documentKey(id));
 }
 
 export function getLegacyStoredDocument(): Promise<StoredDocument | null> {

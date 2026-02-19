@@ -11,6 +11,7 @@ export interface ManuscriptFileMeta {
   name: string;
   createdAt: number;
   updatedAt: number;
+  renamedAt: number;
 }
 
 export interface StoredDocument {

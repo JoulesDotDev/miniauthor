@@ -10,6 +10,7 @@ import type {
   StoredWorkspace,
 } from "@/lib/editor-types";
 import {
+  dropboxDeleteFile,
   dropboxDownloadFile,
   dropboxGetFileMetadata,
   dropboxUploadFile,
@@ -26,6 +27,7 @@ import {
   serializeBlocksToMarkdown,
 } from "@/lib/markdown";
 import {
+  deleteStoredDocument,
   getLegacyStoredDocument,
   getStoredDocument,
   getStoredDropboxToken,
@@ -45,6 +47,11 @@ interface RemoteFilesIndex {
   version: 1;
   files: ManuscriptFileMeta[];
 }
+
+type LooseFileMeta = Partial<ManuscriptFileMeta> & {
+  id: string;
+  name: string;
+};
 
 function dropboxPathForFile(fileId: string): string {
   return `${FILE_PATH_PREFIX}${fileId}${FILE_PATH_SUFFIX}`;
@@ -124,22 +131,30 @@ function makeUniqueFileName(
   return sanitizeFileName(desiredName) || DEFAULT_FILE_NAME;
 }
 
-function normalizeFileMeta(input: ManuscriptFileMeta, now: number): ManuscriptFileMeta {
+function normalizeFileMeta(input: LooseFileMeta, now: number): ManuscriptFileMeta {
+  const createdAt =
+    Number.isFinite(input.createdAt) && (input.createdAt as number) > 0
+      ? (input.createdAt as number)
+      : now;
+  const updatedAtCandidate =
+    Number.isFinite(input.updatedAt) && (input.updatedAt as number) > 0
+      ? (input.updatedAt as number)
+      : createdAt;
+  const renamedAtCandidate =
+    Number.isFinite(input.renamedAt) && (input.renamedAt as number) > 0
+      ? (input.renamedAt as number)
+      : updatedAtCandidate;
+
   return {
     id: input.id,
     name: sanitizeFileName(input.name) || DEFAULT_FILE_NAME,
-    createdAt:
-      Number.isFinite(input.createdAt) && input.createdAt > 0 ? input.createdAt : now,
-    updatedAt:
-      Number.isFinite(input.updatedAt) && input.updatedAt > 0
-        ? input.updatedAt
-        : Number.isFinite(input.createdAt) && input.createdAt > 0
-          ? input.createdAt
-          : now,
+    createdAt,
+    updatedAt: Math.max(updatedAtCandidate, renamedAtCandidate),
+    renamedAt: Math.max(renamedAtCandidate, createdAt),
   };
 }
 
-function normalizeFiles(files: ManuscriptFileMeta[], now = Date.now()): ManuscriptFileMeta[] {
+function normalizeFiles(files: Array<ManuscriptFileMeta | LooseFileMeta>, now = Date.now()): ManuscriptFileMeta[] {
   const deduped = new Map<string, ManuscriptFileMeta>();
 
   for (const file of files) {
@@ -147,10 +162,14 @@ function normalizeFiles(files: ManuscriptFileMeta[], now = Date.now()): Manuscri
       continue;
     }
 
-    const normalized = normalizeFileMeta(file, now);
+    const normalized = normalizeFileMeta(file as LooseFileMeta, now);
     const existing = deduped.get(normalized.id);
 
-    if (!existing || normalized.updatedAt >= existing.updatedAt) {
+    if (
+      !existing ||
+      normalized.renamedAt > existing.renamedAt ||
+      (normalized.renamedAt === existing.renamedAt && normalized.updatedAt >= existing.updatedAt)
+    ) {
       deduped.set(normalized.id, normalized);
     }
   }
@@ -179,19 +198,14 @@ function mergeFileCatalogs(
       continue;
     }
 
-    if (remoteFile.updatedAt > current.updatedAt) {
-      merged.set(remoteFile.id, {
-        ...remoteFile,
-        createdAt: Math.min(current.createdAt, remoteFile.createdAt),
-        updatedAt: Math.max(current.updatedAt, remoteFile.updatedAt),
-      });
-      continue;
-    }
+    const remoteRenameWins = remoteFile.renamedAt >= current.renamedAt;
 
     merged.set(remoteFile.id, {
       ...current,
+      name: remoteRenameWins ? remoteFile.name : current.name,
       createdAt: Math.min(current.createdAt, remoteFile.createdAt),
       updatedAt: Math.max(current.updatedAt, remoteFile.updatedAt),
+      renamedAt: Math.max(current.renamedAt, remoteFile.renamedAt),
     });
   }
 
@@ -216,7 +230,8 @@ function areFileListsEqual(left: ManuscriptFileMeta[], right: ManuscriptFileMeta
       a.id !== b.id ||
       a.name !== b.name ||
       a.createdAt !== b.createdAt ||
-      a.updatedAt !== b.updatedAt
+      a.updatedAt !== b.updatedAt ||
+      a.renamedAt !== b.renamedAt
     ) {
       return false;
     }
@@ -313,6 +328,7 @@ interface UseDropboxSyncResult {
   activeFileId: string | null;
   activeFileName: string;
   activeFileCloudAheadAt: number | null;
+  activeFileHasDropboxSyncState: boolean;
   lastSyncedAt: number | null;
   syncNotice: string;
   isSyncing: boolean;
@@ -328,6 +344,7 @@ interface UseDropboxSyncResult {
   selectFile: (fileId: string) => Promise<void>;
   createFile: (name: string) => Promise<boolean>;
   renameActiveFile: (name: string) => Promise<boolean>;
+  deleteActiveFile: () => Promise<boolean>;
 }
 
 export function useDropboxSync({
@@ -370,6 +387,10 @@ export function useDropboxSync({
 
     return cloudAheadByFileId[activeFileId] ?? null;
   }, [activeFileId, cloudAheadByFileId]);
+
+  const activeFileHasDropboxSyncState = useMemo(() => {
+    return remoteRev !== null || lastSyncedAt !== null;
+  }, [lastSyncedAt, remoteRev]);
 
   const applyDocumentToEditor = useCallback(
     (doc: StoredDocument) => {
@@ -600,12 +621,14 @@ export function useDropboxSync({
             }
 
             const localDocument = await getLocalDocumentSnapshot(remoteFile.id);
-            const localUpdatedAt = Math.max(
-              localDocument?.updatedAt ?? 0,
-              localDocument?.lastSyncedAt ?? 0,
-            );
+            const localLastSyncedAt = localDocument?.lastSyncedAt ?? 0;
+            const remoteAheadByTime = metadata.serverModifiedAt > localLastSyncedAt + 1000;
+            const remoteAheadByRev =
+              Boolean(metadata.rev) &&
+              Boolean(localDocument?.remoteRev) &&
+              metadata.rev !== localDocument?.remoteRev;
 
-            if (metadata.serverModifiedAt > localUpdatedAt + 1000) {
+            if (remoteAheadByTime || remoteAheadByRev) {
               return {
                 id: remoteFile.id,
                 timestamp: metadata.serverModifiedAt,
@@ -727,6 +750,7 @@ export function useDropboxSync({
       name: normalizedName,
       createdAt: now,
       updatedAt: now,
+      renamedAt: now,
     };
     const nextDocument = createEmptyStoredDocument(fileId, now);
     const nextFiles = sortFiles([...filesRef.current, nextFile]);
@@ -771,7 +795,7 @@ export function useDropboxSync({
     const now = Date.now();
     const nextFiles = filesRef.current.map((file) =>
       file.id === currentActiveId
-        ? { ...file, name: nextName, updatedAt: now }
+        ? { ...file, name: nextName, updatedAt: now, renamedAt: now }
         : file,
     );
 
@@ -781,6 +805,141 @@ export function useDropboxSync({
     setSyncNotice(`Renamed current manuscript to "${nextName}".`);
     return true;
   }, [writeWorkspace]);
+
+  const deleteActiveFile = useCallback(async (): Promise<boolean> => {
+    if (isSyncing || isPulling) {
+      return false;
+    }
+
+    const currentActiveId = activeFileIdRef.current;
+    if (!currentActiveId) {
+      return false;
+    }
+
+    const currentFiles = filesRef.current;
+    const currentFileIndex = currentFiles.findIndex((file) => file.id === currentActiveId);
+    if (currentFileIndex < 0) {
+      return false;
+    }
+
+    const currentFile = currentFiles[currentFileIndex];
+    const hasDropboxSyncState = remoteRev !== null || lastSyncedAt !== null;
+    const canDeleteInDropbox = Boolean(dropboxTokenRef.current && dropboxAppKey && isOnline);
+
+    if (canDeleteInDropbox) {
+      try {
+        let validToken = await ensureValidDropboxToken(dropboxAppKey as string, dropboxTokenRef.current as DropboxTokenState);
+
+        if (
+          validToken.accessToken !== (dropboxTokenRef.current as DropboxTokenState).accessToken ||
+          validToken.expiresAt !== (dropboxTokenRef.current as DropboxTokenState).expiresAt
+        ) {
+          dropboxTokenRef.current = validToken;
+          setDropboxToken(validToken);
+        }
+
+        await dropboxDeleteFile(validToken.accessToken, dropboxPathForFile(currentActiveId));
+
+        const remoteCatalogFile = await dropboxDownloadFile(validToken.accessToken, FILE_INDEX_PATH);
+        const remoteFiles = remoteCatalogFile ? parseRemoteFilesIndex(remoteCatalogFile.content) : [];
+        const nextRemoteFiles = remoteFiles.filter((file) => file.id !== currentActiveId);
+        const serializedRemote = serializeRemoteFilesIndex(nextRemoteFiles);
+
+        if (
+          !remoteCatalogFile ||
+          normalizeTextForCompare(remoteCatalogFile.content) !== normalizeTextForCompare(serializedRemote)
+        ) {
+          await dropboxUploadFile(validToken.accessToken, FILE_INDEX_PATH, serializedRemote);
+        }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "Delete failed.";
+
+        if (isDropboxAuthError(detail)) {
+          dropboxTokenRef.current = null;
+          setDropboxToken(null);
+          setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+        } else {
+          setSyncNotice(detail);
+        }
+
+        return false;
+      }
+    }
+
+    const nextFilesWithoutCurrent = currentFiles.filter((file) => file.id !== currentActiveId);
+    let nextFiles = nextFilesWithoutCurrent;
+    let nextActiveId: string | null = null;
+    let nextActiveDocument: StoredDocument;
+
+    delete documentCacheRef.current[currentActiveId];
+    await deleteStoredDocument(currentActiveId);
+
+    if (nextFilesWithoutCurrent.length === 0) {
+      const now = Date.now();
+      const firstFileId = createFileId();
+      const firstFile: ManuscriptFileMeta = {
+        id: firstFileId,
+        name: DEFAULT_FIRST_FILE_NAME,
+        createdAt: now,
+        updatedAt: now,
+        renamedAt: now,
+      };
+      const fallbackDocument = createEmptyStoredDocument(firstFileId, now);
+
+      nextFiles = [firstFile];
+      nextActiveId = firstFileId;
+      nextActiveDocument = fallbackDocument;
+      documentCacheRef.current[firstFileId] = fallbackDocument;
+
+      await setStoredDocument(fallbackDocument);
+    } else {
+      const fallbackIndex = Math.min(currentFileIndex, nextFilesWithoutCurrent.length - 1);
+      nextActiveId = nextFilesWithoutCurrent[fallbackIndex]?.id ?? nextFilesWithoutCurrent[0].id;
+      nextActiveDocument = await getOrCreateLocalDocument(nextActiveId);
+    }
+
+    filesRef.current = nextFiles;
+    activeFileIdRef.current = nextActiveId;
+    setFiles(nextFiles);
+    setActiveFileId(nextActiveId);
+    applyDocumentToEditor(nextActiveDocument);
+    setConflict((current) => (current && current.fileId === currentActiveId ? null : current));
+    setCloudAheadByFileId((current) => {
+      if (!(currentActiveId in current)) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[currentActiveId];
+      return next;
+    });
+
+    await setStoredWorkspace({
+      files: nextFiles,
+      activeFileId: nextActiveId,
+    });
+
+    if (!isOnline && hasDropboxSyncState) {
+      setSyncNotice(
+        `Deleted "${currentFile.name}" locally. You're offline, so Dropbox still has it and it can reappear after Pull.`,
+      );
+    } else if (canDeleteInDropbox) {
+      setSyncNotice(`Deleted "${currentFile.name}" locally and from Dropbox.`);
+    } else {
+      setSyncNotice(`Deleted "${currentFile.name}" locally.`);
+    }
+
+    return true;
+  }, [
+    applyDocumentToEditor,
+    dropboxAppKey,
+    getOrCreateLocalDocument,
+    isOnline,
+    isPulling,
+    isSyncing,
+    lastSyncedAt,
+    remoteRev,
+  ]);
 
   const syncWithDropbox = useCallback(async (): Promise<boolean> => {
     if (isSyncing || isPulling) {
@@ -1156,6 +1315,7 @@ export function useDropboxSync({
             name: DEFAULT_FIRST_FILE_NAME,
             createdAt: now,
             updatedAt: now,
+            renamedAt: now,
           };
           nextFiles = [firstFile];
           nextActiveId = firstFileId;
@@ -1301,6 +1461,7 @@ export function useDropboxSync({
     activeFileId,
     activeFileName,
     activeFileCloudAheadAt,
+    activeFileHasDropboxSyncState,
     lastSyncedAt,
     syncNotice,
     isSyncing,
@@ -1316,5 +1477,6 @@ export function useDropboxSync({
     selectFile,
     createFile,
     renameActiveFile,
+    deleteActiveFile,
   };
 }

@@ -232,6 +232,7 @@ export function App() {
     activeFileId,
     activeFileName,
     activeFileCloudAheadAt,
+    activeFileHasDropboxSyncState,
     lastSyncedAt,
     syncNotice,
     isSyncing,
@@ -247,6 +248,7 @@ export function App() {
     selectFile,
     createFile,
     renameActiveFile,
+    deleteActiveFile,
   } = useDropboxSync({
     blocks,
     setBlocks,
@@ -511,6 +513,8 @@ export function App() {
           }}
           onCreateFile={createFile}
           onRenameActiveFile={renameActiveFile}
+          onDeleteActiveFile={deleteActiveFile}
+          showOfflineDeleteWarning={!isOnline && activeFileHasDropboxSyncState}
         />
 
         <ConflictModal

@@ -563,10 +563,11 @@ textarea {
   margin-top: 14px;
 }
 
-.sync-cloud-ahead-hint {
+.settings-panel p.sync-cloud-ahead-hint {
   margin: 8px 2px 0;
   color: var(--danger);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.4;
 }
 
@@ -580,7 +581,7 @@ textarea {
 .file-picker-secondary-row {
   margin-top: 8px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
 }
 
@@ -675,6 +676,17 @@ textarea {
 .file-picker-secondary-button:disabled {
   opacity: 0.62;
   cursor: not-allowed;
+}
+
+.file-picker-danger-button {
+  border-color: color-mix(in oklab, var(--line-subtle) 84%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 92%, var(--danger));
+  color: color-mix(in oklab, var(--text-main) 88%, var(--danger));
+}
+
+.file-picker-danger-button:hover {
+  border-color: color-mix(in oklab, var(--line-subtle) 78%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 86%, var(--danger));
 }
 
 .export-actions {
@@ -802,6 +814,25 @@ textarea {
   line-height: 1.45;
 }
 
+.file-delete-hint {
+  margin-top: 8px !important;
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+.file-delete-hint code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.file-delete-warning {
+  margin-top: 8px !important;
+  color: var(--danger) !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
 .file-name-input {
   width: 100%;
   height: 40px;
@@ -849,6 +880,17 @@ textarea {
 .file-name-modal-actions button:disabled {
   opacity: 0.62;
   cursor: not-allowed;
+}
+
+.file-name-modal-actions button.danger {
+  border-color: color-mix(in oklab, var(--line-subtle) 84%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 92%, var(--danger));
+  color: color-mix(in oklab, var(--text-main) 88%, var(--danger));
+}
+
+.file-name-modal-actions button.danger:hover {
+  border-color: color-mix(in oklab, var(--line-subtle) 78%, var(--danger));
+  background: color-mix(in oklab, var(--surface-muted) 86%, var(--danger));
 }
 
 .button-row button {

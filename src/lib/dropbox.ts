@@ -274,6 +274,31 @@ export async function dropboxUploadFile(
   };
 }
 
+export async function dropboxDeleteFile(
+  token: string,
+  path: string,
+): Promise<boolean> {
+  const response = await fetch("https://api.dropboxapi.com/2/files/delete_v2", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ path }),
+  });
+
+  if (response.status === 409) {
+    return false;
+  }
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Dropbox delete failed: ${detail}`);
+  }
+
+  return true;
+}
+
 export async function dropboxGetFileMetadata(
   token: string,
   path: string,
