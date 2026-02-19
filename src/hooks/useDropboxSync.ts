@@ -37,6 +37,24 @@ import {
   setStoredWorkspace,
 } from "@/lib/storage";
 
+async function runWithMinimumSpinner<T>(
+  setFlag: (value: boolean) => void,
+  minimumMs: number,
+  task: () => Promise<T>,
+): Promise<T> {
+  setFlag(true);
+  const start = Date.now();
+  try {
+    return await task();
+  } finally {
+    const elapsed = Date.now() - start;
+    if (elapsed < minimumMs) {
+      await new Promise((resolve) => setTimeout(resolve, minimumMs - elapsed));
+    }
+    setFlag(false);
+  }
+}
+
 const FILE_INDEX_PATH = "/.mini-author-files.json";
 const FILE_PATH_PREFIX = "/mini-author-";
 const FILE_PATH_SUFFIX = ".md";
@@ -973,127 +991,125 @@ export function useDropboxSync({
       return false;
     }
 
-    setIsSyncing(true);
+    return runWithMinimumSpinner(setIsSyncing, 500, async () => {
+      try {
+        let validToken = await ensureValidDropboxToken(dropboxAppKey, dropboxTokenRef.current as DropboxTokenState);
 
-    try {
-      let validToken = await ensureValidDropboxToken(dropboxAppKey, dropboxTokenRef.current);
-
-      if (
-        validToken.accessToken !== dropboxTokenRef.current.accessToken ||
-        validToken.expiresAt !== dropboxTokenRef.current.expiresAt
-      ) {
-        dropboxTokenRef.current = validToken;
-        setDropboxToken(validToken);
-      }
-
-      const localMarkdown = serializeBlocksToMarkdown(blocks);
-      const remoteFile = await dropboxDownloadFile(validToken.accessToken, dropboxPathForFile(currentActiveId));
-      const remoteMarkdown = remoteFile?.content ?? "";
-      const localHasContent = hasMeaningfulBlocksContent(blocks);
-      const remoteBlocks = parseMarkdownToBlocks(remoteMarkdown);
-      const remoteHasContent = hasMeaningfulBlocksContent(remoteBlocks);
-      const mergeLocalMarkdown = localHasContent ? localMarkdown : "";
-      const mergeRemoteMarkdown = remoteHasContent ? remoteMarkdown : "";
-      const isFirstSync =
-        lastSyncedAt === null &&
-        remoteRev === null &&
-        baseMarkdown.trim().length === 0;
-
-      if (
-        isFirstSync &&
-        remoteFile &&
-        localHasContent &&
-        remoteHasContent &&
-        mergeLocalMarkdown !== mergeRemoteMarkdown
-      ) {
-        setConflict({
-          fileId: currentActiveId,
-          fileName: currentFile.name,
-          base: "",
-          local: mergeLocalMarkdown,
-          remote: mergeRemoteMarkdown,
-          resolved: mergeLocalMarkdown,
-          reason: "This manuscript has local and Dropbox drafts. Choose one or merge manually.",
-        });
-        setSyncNotice(`Conflict in "${currentFile.name}".`);
-        return false;
-      }
-
-      const mergeResult = threeWayMergeText(baseMarkdown, mergeLocalMarkdown, mergeRemoteMarkdown);
-
-      if (mergeResult.status === "conflict") {
-        setConflict({
-          fileId: currentActiveId,
-          fileName: currentFile.name,
-          base: baseMarkdown,
-          local: mergeLocalMarkdown,
-          remote: mergeRemoteMarkdown,
-          resolved: mergeLocalMarkdown,
-          reason: mergeResult.reason,
-        });
-        setSyncNotice(`Conflict in "${currentFile.name}".`);
-        return false;
-      }
-
-      const mergedMarkdown = mergeResult.merged;
-      let latestRev = remoteFile?.rev ?? remoteRev;
-
-      if (!remoteFile || mergedMarkdown !== mergeRemoteMarkdown) {
-        const uploaded = await dropboxUploadFile(
-          validToken.accessToken,
-          dropboxPathForFile(currentActiveId),
-          mergedMarkdown,
-        );
-        latestRev = uploaded.rev;
-      }
-
-      const normalizedMergedBlocks = normalizeBlocksForEditor(parseMarkdownToBlocks(mergedMarkdown));
-      const now = Date.now();
-      const mergedDocument: StoredDocument = {
-        id: currentActiveId,
-        blocks: normalizedMergedBlocks,
-        updatedAt: now,
-        lastSyncedAt: now,
-        baseMarkdown: mergedMarkdown,
-        remoteRev: latestRev ?? null,
-      };
-
-      documentCacheRef.current[currentActiveId] = mergedDocument;
-      await setStoredDocument(mergedDocument);
-
-      setBlocks(normalizedMergedBlocks);
-      setBaseMarkdown(mergedMarkdown);
-      setRemoteRev(latestRev ?? null);
-      setLastSyncedAt(now);
-      setUpdatedAt(now);
-      setConflict(null);
-      setCloudAheadByFileId((current) => {
-        if (!(currentActiveId in current)) {
-          return current;
+        if (
+          validToken.accessToken !== (dropboxTokenRef.current as DropboxTokenState).accessToken ||
+          validToken.expiresAt !== (dropboxTokenRef.current as DropboxTokenState).expiresAt
+        ) {
+          dropboxTokenRef.current = validToken;
+          setDropboxToken(validToken);
         }
 
-        const next = { ...current };
-        delete next[currentActiveId];
-        return next;
-      });
-      setSyncNotice(`Dropbox sync complete for "${currentFile.name}".`);
+        const localMarkdown = serializeBlocksToMarkdown(blocks);
+        const remoteFile = await dropboxDownloadFile(validToken.accessToken, dropboxPathForFile(currentActiveId));
+        const remoteMarkdown = remoteFile?.content ?? "";
+        const localHasContent = hasMeaningfulBlocksContent(blocks);
+        const remoteBlocks = parseMarkdownToBlocks(remoteMarkdown);
+        const remoteHasContent = hasMeaningfulBlocksContent(remoteBlocks);
+        const mergeLocalMarkdown = localHasContent ? localMarkdown : "";
+        const mergeRemoteMarkdown = remoteHasContent ? remoteMarkdown : "";
+        const isFirstSync =
+          lastSyncedAt === null &&
+          remoteRev === null &&
+          baseMarkdown.trim().length === 0;
 
-      return true;
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "Unknown Dropbox error.";
+        if (
+          isFirstSync &&
+          remoteFile &&
+          localHasContent &&
+          remoteHasContent &&
+          mergeLocalMarkdown !== mergeRemoteMarkdown
+        ) {
+          setConflict({
+            fileId: currentActiveId,
+            fileName: currentFile.name,
+            base: "",
+            local: mergeLocalMarkdown,
+            remote: mergeRemoteMarkdown,
+            resolved: mergeLocalMarkdown,
+            reason: "This manuscript has local and Dropbox drafts. Choose one or merge manually.",
+          });
+          setSyncNotice(`Conflict in "${currentFile.name}".`);
+          return false;
+        }
 
-      if (isDropboxAuthError(detail)) {
-        dropboxTokenRef.current = null;
-        setDropboxToken(null);
-        setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
-      } else {
-        setSyncNotice(detail);
+        const mergeResult = threeWayMergeText(baseMarkdown, mergeLocalMarkdown, mergeRemoteMarkdown);
+
+        if (mergeResult.status === "conflict") {
+          setConflict({
+            fileId: currentActiveId,
+            fileName: currentFile.name,
+            base: baseMarkdown,
+            local: mergeLocalMarkdown,
+            remote: mergeRemoteMarkdown,
+            resolved: mergeLocalMarkdown,
+            reason: mergeResult.reason,
+          });
+          setSyncNotice(`Conflict in "${currentFile.name}".`);
+          return false;
+        }
+
+        const mergedMarkdown = mergeResult.merged;
+        let latestRev = remoteFile?.rev ?? remoteRev;
+
+        if (!remoteFile || mergedMarkdown !== mergeRemoteMarkdown) {
+          const uploaded = await dropboxUploadFile(
+            validToken.accessToken,
+            dropboxPathForFile(currentActiveId),
+            mergedMarkdown,
+          );
+          latestRev = uploaded.rev;
+        }
+
+        const normalizedMergedBlocks = normalizeBlocksForEditor(parseMarkdownToBlocks(mergedMarkdown));
+        const now = Date.now();
+        const mergedDocument: StoredDocument = {
+          id: currentActiveId,
+          blocks: normalizedMergedBlocks,
+          updatedAt: now,
+          lastSyncedAt: now,
+          baseMarkdown: mergedMarkdown,
+          remoteRev: latestRev ?? null,
+        };
+
+        documentCacheRef.current[currentActiveId] = mergedDocument;
+        await setStoredDocument(mergedDocument);
+
+        setBlocks(normalizedMergedBlocks);
+        setBaseMarkdown(mergedMarkdown);
+        setRemoteRev(latestRev ?? null);
+        setLastSyncedAt(now);
+        setUpdatedAt(now);
+        setConflict(null);
+        setCloudAheadByFileId((current) => {
+          if (!(currentActiveId in current)) {
+            return current;
+          }
+
+          const next = { ...current };
+          delete next[currentActiveId];
+          return next;
+        });
+        setSyncNotice(`Dropbox sync complete for "${currentFile.name}".`);
+
+        return true;
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "Unknown Dropbox error.";
+
+        if (isDropboxAuthError(detail)) {
+          dropboxTokenRef.current = null;
+          setDropboxToken(null);
+          setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+        } else {
+          setSyncNotice(detail);
+        }
+
+        return false;
       }
-
-      return false;
-    } finally {
-      setIsSyncing(false);
-    }
+    });
   }, [
     baseMarkdown,
     blocks,
@@ -1117,7 +1133,9 @@ export function useDropboxSync({
       return false;
     }
 
-    if (!dropboxTokenRef.current) {
+    const existingToken = dropboxTokenRef.current;
+
+    if (!existingToken) {
       setSyncNotice("Connect Dropbox first.");
       return false;
     }
@@ -1127,38 +1145,33 @@ export function useDropboxSync({
       return false;
     }
 
-    setIsPulling(true);
+    return runWithMinimumSpinner(setIsPulling, 500, async () => {
+      try {
+        let validToken = await ensureValidDropboxToken(dropboxAppKey, existingToken);
 
-    try {
-      let validToken = await ensureValidDropboxToken(dropboxAppKey, dropboxTokenRef.current);
+        if (validToken.accessToken !== existingToken.accessToken || validToken.expiresAt !== existingToken.expiresAt) {
+          dropboxTokenRef.current = validToken;
+          setDropboxToken(validToken);
+        }
 
-      if (
-        validToken.accessToken !== dropboxTokenRef.current.accessToken ||
-        validToken.expiresAt !== dropboxTokenRef.current.expiresAt
-      ) {
-        dropboxTokenRef.current = validToken;
-        setDropboxToken(validToken);
+        await persistCurrentActiveSnapshot();
+        await syncFileCatalogWithDropbox(validToken);
+        setSyncNotice("Pulled latest manuscript list from Dropbox.");
+        return true;
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "Failed to pull Dropbox file list.";
+
+        if (isDropboxAuthError(detail)) {
+          dropboxTokenRef.current = null;
+          setDropboxToken(null);
+          setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+        } else {
+          setSyncNotice(detail);
+        }
+
+        return false;
       }
-
-      await persistCurrentActiveSnapshot();
-      await syncFileCatalogWithDropbox(validToken);
-      setSyncNotice("Pulled latest manuscript list from Dropbox.");
-      return true;
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "Failed to pull Dropbox file list.";
-
-      if (isDropboxAuthError(detail)) {
-        dropboxTokenRef.current = null;
-        setDropboxToken(null);
-        setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
-      } else {
-        setSyncNotice(detail);
-      }
-
-      return false;
-    } finally {
-      setIsPulling(false);
-    }
+    });
   }, [dropboxAppKey, isOnline, isPulling, isSyncing, persistCurrentActiveSnapshot, syncFileCatalogWithDropbox]);
 
   const connectDropbox = useCallback(async () => {
@@ -1179,74 +1192,71 @@ export function useDropboxSync({
   }, []);
 
   const resolveConflict = useCallback(async () => {
-    if (!conflict || !dropboxTokenRef.current || !dropboxAppKey) {
+    const existingToken = dropboxTokenRef.current;
+
+    if (!conflict || !existingToken || !dropboxAppKey) {
       return;
     }
 
-    setIsSyncing(true);
+    return runWithMinimumSpinner(setIsSyncing, 500, async () => {
+      try {
+        const validToken = await ensureValidDropboxToken(dropboxAppKey, existingToken);
 
-    try {
-      const validToken = await ensureValidDropboxToken(dropboxAppKey, dropboxTokenRef.current);
-
-      if (
-        validToken.accessToken !== dropboxTokenRef.current.accessToken ||
-        validToken.expiresAt !== dropboxTokenRef.current.expiresAt
-      ) {
-        dropboxTokenRef.current = validToken;
-        setDropboxToken(validToken);
-      }
-
-      const uploadResult = await dropboxUploadFile(
-        validToken.accessToken,
-        dropboxPathForFile(conflict.fileId),
-        conflict.resolved,
-      );
-      const resolvedBlocks = normalizeBlocksForEditor(parseMarkdownToBlocks(conflict.resolved));
-      const now = Date.now();
-      const resolvedDocument: StoredDocument = {
-        id: conflict.fileId,
-        blocks: resolvedBlocks,
-        updatedAt: now,
-        lastSyncedAt: now,
-        baseMarkdown: conflict.resolved,
-        remoteRev: uploadResult.rev,
-      };
-
-      documentCacheRef.current[conflict.fileId] = resolvedDocument;
-      await setStoredDocument(resolvedDocument);
-
-      if (conflict.fileId === activeFileIdRef.current) {
-        setBlocks(resolvedBlocks);
-        setBaseMarkdown(conflict.resolved);
-        setRemoteRev(uploadResult.rev);
-        setLastSyncedAt(now);
-        setUpdatedAt(now);
-      }
-
-      setConflict(null);
-      setCloudAheadByFileId((current) => {
-        if (!(conflict.fileId in current)) {
-          return current;
+        if (validToken.accessToken !== existingToken.accessToken || validToken.expiresAt !== existingToken.expiresAt) {
+          dropboxTokenRef.current = validToken;
+          setDropboxToken(validToken);
         }
 
-        const next = { ...current };
-        delete next[conflict.fileId];
-        return next;
-      });
-      setSyncNotice(`Conflict resolved for "${conflict.fileName}".`);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "Conflict upload failed.";
+        const uploadResult = await dropboxUploadFile(
+          validToken.accessToken,
+          dropboxPathForFile(conflict.fileId),
+          conflict.resolved,
+        );
+        const resolvedBlocks = normalizeBlocksForEditor(parseMarkdownToBlocks(conflict.resolved));
+        const now = Date.now();
+        const resolvedDocument: StoredDocument = {
+          id: conflict.fileId,
+          blocks: resolvedBlocks,
+          updatedAt: now,
+          lastSyncedAt: now,
+          baseMarkdown: conflict.resolved,
+          remoteRev: uploadResult.rev,
+        };
 
-      if (isDropboxAuthError(detail)) {
-        dropboxTokenRef.current = null;
-        setDropboxToken(null);
-        setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
-      } else {
-        setSyncNotice(detail);
+        documentCacheRef.current[conflict.fileId] = resolvedDocument;
+        await setStoredDocument(resolvedDocument);
+
+        if (conflict.fileId === activeFileIdRef.current) {
+          setBlocks(resolvedBlocks);
+          setBaseMarkdown(conflict.resolved);
+          setRemoteRev(uploadResult.rev);
+          setLastSyncedAt(now);
+          setUpdatedAt(now);
+        }
+
+        setConflict(null);
+        setCloudAheadByFileId((current) => {
+          if (!(conflict.fileId in current)) {
+            return current;
+          }
+
+          const next = { ...current };
+          delete next[conflict.fileId];
+          return next;
+        });
+        setSyncNotice(`Conflict resolved for "${conflict.fileName}".`);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "Conflict upload failed.";
+
+        if (isDropboxAuthError(detail)) {
+          dropboxTokenRef.current = null;
+          setDropboxToken(null);
+          setSyncNotice("Dropbox session expired. Please reconnect Dropbox.");
+        } else {
+          setSyncNotice(detail);
+        }
       }
-    } finally {
-      setIsSyncing(false);
-    }
+    });
   }, [conflict, dropboxAppKey, setBlocks, setUpdatedAt]);
 
   useEffect(() => {

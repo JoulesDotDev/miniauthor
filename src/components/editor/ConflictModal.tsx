@@ -361,16 +361,17 @@ export function ConflictModal({
                 return;
               }
 
-              onChangeResolved(resolvedMarkdown);
-              onSaveResolution();
-              setIsSaveConfirming(false);
-            }}
-            disabled={isSyncing}
-          >
-            {isSaveConfirming ? "Are you sure?" : "Save Resolution"}
-          </button>
-        </div>
+            onChangeResolved(resolvedMarkdown);
+            onSaveResolution();
+            setIsSaveConfirming(false);
+          }}
+          disabled={isSyncing}
+          aria-live="polite"
+        >
+          {isSyncing ? "Saving..." : isSaveConfirming ? "Are you sure?" : "Save Resolution"}
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 }

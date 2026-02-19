@@ -1091,9 +1091,9 @@ textarea {
 }
 
 .selection-toolbar button.is-active {
-  border-color: color-mix(in oklab, var(--line-strong) 35%, var(--accent));
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--hover-paper-border);
+  background: var(--hover-paper);
+  color: var(--text-main);
 }
 
 .selection-toolbar-sep {

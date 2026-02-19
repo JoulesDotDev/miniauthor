@@ -108,6 +108,12 @@ export function SyncPanel({
       : fileDialogMode === "delete"
         ? "Delete File"
         : "Create File";
+  const fileDialogSubmittingLabel =
+    fileDialogMode === "rename"
+      ? "Saving..."
+      : fileDialogMode === "delete"
+        ? "Deleting..."
+        : "Creating...";
   const fileDialogDescription =
     fileDialogMode === "rename"
       ? "Update the name shown in your manuscript list."
@@ -127,6 +133,7 @@ export function SyncPanel({
     }
 
     setIsFileDialogSubmitting(true);
+    const startedAt = Date.now();
 
     const success =
       fileDialogMode === "rename"
@@ -135,6 +142,10 @@ export function SyncPanel({
           ? await onDeleteActiveFile()
           : await onCreateFile(normalizedFileDialogValue);
 
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < 500) {
+      await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+    }
     setIsFileDialogSubmitting(false);
 
     if (success) {
@@ -169,7 +180,11 @@ export function SyncPanel({
               <span>Connect Dropbox</span>
             </button>
           )}
-          <button type="button" onClick={onSync} disabled={isSyncing || isPulling || !activeFileId || !isOnline}>
+          <button
+            type="button"
+            onClick={onSync}
+            disabled={isSyncing || isPulling || !activeFileId || !isOnline || !isConnected}
+          >
             <RefreshCw size={15} className={isSyncing ? "button-icon-spin" : undefined} />
             <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
           </button>
